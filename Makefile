@@ -66,7 +66,7 @@ endif
 dsme_C_OBJS       := dsme-wdd.o dsme-wdd-wd.o oom.o
 dsme: C_OPTFLAGS  := -O2 -s
 dsme: C_GENFLAGS  := -DPRG_VERSION=$(VERSION) -g -std=c99 \
-                     -Wall -Wwrite-strings -Wmissing-prototypes -Werror
+                     -Wall -Wwrite-strings -Wmissing-prototypes -Werror -Wno-unused-but-set-variable
 dsme_LIBS         := cal
 dsme: LD_GENFLAGS :=
 

@@ -33,7 +33,7 @@ runlevel.o : C_EXTRA_GENFLAGS := -fPIC
 
 liblifeguard_C_OBJS := lifeguard.o spawn.o
 lifeguard.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0)
-spawn.o     : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0)
+spawn.o     : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0) -Wno-unused-but-set-variable
 
 libprocesswd_C_OBJS := processwd.o
 processwd.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0)
