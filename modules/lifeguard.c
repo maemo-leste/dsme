@@ -411,7 +411,7 @@ static void read_priv_uids(void)
           map_name_to_uid(line, &uid))
         {
           dsme_log(LOG_DEBUG, "Got UID: %i, adding to list..", uid);	
-          uids = g_slist_prepend(uids, (void*)uid);
+          uids = g_slist_prepend(uids, GUINT_TO_POINTER(uid));
         }
 
   }
@@ -683,7 +683,7 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_START, client, msg)
   }
 
   if (process->action == RESET && ucred->uid != 0) {
-      if (g_slist_find(uids, (void*)process->uid)) {
+      if (g_slist_find(uids, GUINT_TO_POINTER(process->uid))) {
           /* No permission to set RESET policy */
           dsme_log(LOG_ERR, "No permission to set RESET policy for Lifeguard");
           error = EX_NOPERM;
@@ -898,7 +898,7 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
               /* Check if it hasn't respawned too fast */
               if (proc->restart_count >= proc->restart_limit) {
                   /* Try reset */
-                  if (proc->uid == 0 || g_slist_find(uids, (void*)proc->uid)) {
+                  if (proc->uid == 0 || g_slist_find(uids, GUINT_TO_POINTER(proc->uid))) {
                       if (proc->action == RESPAWN) {
                           dsme_log(LOG_CRIT,
                                    "Process '%s' with pid %d exited with %s %d; spawning too fast -> reset",
@@ -957,7 +957,7 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
               break;
 
             case RESET:
-              if (proc->uid == 0 || g_slist_find(uids, (void*)proc->uid)) {
+              if (proc->uid == 0 || g_slist_find(uids, GUINT_TO_POINTER(proc->uid))) {
                   dsme_log(LOG_CRIT,
                            "Process '%s' with pid %d exited with %s %d; reset due to RESET policy",
                            proc->command,

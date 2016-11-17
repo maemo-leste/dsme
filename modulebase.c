@@ -89,9 +89,9 @@ static void remove_msghandlers(module_t* module);
 /** 
    Comparison function; matches messages with handlers by message type.
 
-   @param handler Handler to be compared
-   @param msg_type Message type to be compared. Internally cast to integer.
-   @return Non-0 if message type matches with given node, otherwise 0.
+   @param a  Handler to be compared
+   @param b  Message type to be compared. Internally cast to integer.
+   @return negative/zero/positive if a is smaller/equal/larger than b
 */
 static gint msg_comparator(gconstpointer a, gconstpointer b);
 
@@ -102,12 +102,21 @@ static gint msg_comparator(gconstpointer a, gconstpointer b);
    Message handlers are sorted primarily by message type in descending order.
    Handlers for same message type are sorted by priority in descending order.
 
-   @param handler   New handler to be added to the list of handlers.
-   @param existing  Existing handler in list of handlers.
-   @return Non-0 when the new handler should be inserted before existing
-           handler, otherwise 0.
+   @param a  New handler to be added to the list of handlers.
+   @param b  Existing handler in list of handlers.
+   @return negative/zero/positive if a is smaller/equal/larger than b.
 */
 static gint sort_comparator(gconstpointer a, gconstpointer b, gpointer unused);
+
+
+/** 
+   Type agnostic, overflow safe macro for comparing numeric values.
+
+   @param v1  1st number
+   @param v2  2nd number (of the same type as the 1st one)
+   @return -1,0,+1 depending if v1 is smaller, equal or larger than v2
+*/
+#define compare(v1,v2) (((v1)>(v2))-((v1)<(v2)))
 
 
 /**
@@ -136,25 +145,19 @@ static const struct ucred bogus_ucred = {
 static int msg_comparator(gconstpointer a, gconstpointer b)
 {
   const msg_handler_info_t* handler  = (msg_handler_info_t*)a;
-  const void*               msg_type = b;
+  u_int32_t                 msg_type = GPOINTER_TO_UINT(b);
 
-  return handler->msg_type - (u_int32_t)msg_type;
+  return compare(handler->msg_type, msg_type);
 }
 
 
 static gint sort_comparator(gconstpointer a, gconstpointer b, gpointer unused)
 {
-    const msg_handler_info_t* handler  = (msg_handler_info_t*)a;
-    const msg_handler_info_t* existing = (msg_handler_info_t*)b;
+  const msg_handler_info_t* handler  = (msg_handler_info_t*)a;
+  const msg_handler_info_t* existing = (msg_handler_info_t*)b;
 
-    if (handler->msg_type > existing->msg_type)
-        return 1;
-
-    if (handler->msg_type < existing->msg_type)
-        return 0;
-
-    // TODO: double check that we get the ordering right here
-    return handler->owner->priority > existing->owner->priority;
+  return compare(handler->msg_type, existing->msg_type) ?:
+	 compare(handler->owner->priority, existing->owner->priority);
 }
 
 
@@ -525,7 +528,7 @@ static int handle_message(endpoint_t*              from,
 
   node = callbacks;
   while ((node = g_slist_find_custom(node,
-                                     (void*)dsmemsg_id(msg),
+                                     GUINT_TO_POINTER(dsmemsg_id(msg)),
                                      msg_comparator)))
   {
       handler = (msg_handler_info_t*)(node->data);
