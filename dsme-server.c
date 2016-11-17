@@ -226,7 +226,9 @@ int main(int argc, char *argv[])
       fprintf(stderr, ME "Couldn't set the priority: %s\n", strerror(errno));
   }
 
+#if !GLIB_CHECK_VERSION(2,31,0)
   g_thread_init(0); /* notice that this spawns a thread */
+#endif
 
   dsme_cal_init();
 
