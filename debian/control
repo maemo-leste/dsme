@@ -10,7 +10,8 @@ Build-Depends: debhelper (>= 4.1.0),
  libglib2.0-dev,
  libdbus-1-dev (>= 1.0),
  libdbus-glib-1-dev,
- upstart-dev
+ upstart-dev,
+ bash
 Standards-Version: 3.7.2
 
 Package: dsme
