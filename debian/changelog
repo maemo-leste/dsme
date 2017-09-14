@@ -1,3 +1,10 @@
+dsme (0.60.49) unstable; urgency=medium
+
+  * change upstart-dev dep to maemo-system-services-dev
+  * enable git builds
+
+ -- Ivan J. <parazyd@dyne.org>  Thu, 14 Sep 2017 20:34:00 +0200
+
 dsme (0.60.49+0cssu2) unstable; urgency=low
 
   * Do not call getbootstate, it can increase reboot count which causing MALF
