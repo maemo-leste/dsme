@@ -1,3 +1,9 @@
+dsme (0.60.50-1) unstable; urgency=medium
+
+  * Remove -Werror for now (second try)
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Sun, 07 Jan 2018 22:25:00 +0200
+
 dsme (0.60.50) unstable; urgency=medium
 
   * Replace_BSD_SOURCE with_DEFAULT_SOURCE
