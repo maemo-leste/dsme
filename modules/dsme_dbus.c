@@ -24,7 +24,7 @@
 
 // TODO: add D-Bus filtering
 
-#define _BSD_SOURCE
+#define _DEFAULT_SOURCE
 
 #include "dsme_dbus.h"
 
