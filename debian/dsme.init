@@ -1,0 +1,61 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:		dsme
+# Required-Start:	$remote_fs $syslog dbus
+# Required-Stop:	$remote_fs $syslog dbus
+# Default-Start:	2 3 4 5
+# Default-Stop:		0 1 6
+# Short-Description:	Device state manager entity.
+# Description:		This init script starts the Device state manager entity
+#			used on the maemo platform for Internet Tablets.
+### END INIT INFO
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/sbin/dsme
+NAME=dsme
+DESC="Device state manager entity"
+
+# abort if no executable exists
+test -x $DAEMON || exit 0
+
+set -e
+
+start_dsme()
+{
+	if [ -f "/var/lib/dsme/saved_state" ]
+	then
+		export BOOTSTATE=`cat /var/lib/dsme/saved_state`
+	else
+		export BOOTSTATE="USER"
+	fi
+
+	touch /tmp/$BOOTSTATE
+	echo $BOOTSTATE > /tmp/STATE
+	echo
+	echo "About to exec $NAME in state '$BOOTSTATE'."
+	start-stop-daemon --start --quiet --oknodo --exec $DAEMON -- -d -p /usr/lib/dsme/libstartup.so
+	#start-stop-daemon --start --quiet --oknodo --exec $DAEMON -- -d -l stderr -v 7 -p /usr/lib/dsme/libstartup.so
+
+	until waitfordsme; do
+		sleep 1
+	done
+}
+
+case "$1" in
+start)
+	printf "Starting $DESC: $NAME"
+	start_dsme
+	printf ".\n"
+	;;
+
+stop|status)
+	# No-op
+	;;
+
+*)
+	printf "Usage: $INITFILE {start}\n" >&2
+	exit 1
+	;;
+esac
+
+exit 0
