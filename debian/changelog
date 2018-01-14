@@ -1,3 +1,9 @@
+dsme (0.60.51) unstable; urgency=medium
+
+  * migrate to openrc init scripts
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Sun, 14 Jan 2018 14:15:33 +0200
+
 dsme (0.60.50-1) unstable; urgency=medium
 
   * Remove -Werror for now (second try)
