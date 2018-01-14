@@ -1,11 +1,12 @@
-description "Select thermal limits"
-author "Semi Malinen"
+#!/sbin/openrc-run
 
-start on started dbus
+description="Select thermal limits"
 
-console output
+depend() {
+	after dbus dbus-actdead
+}
 
-script
+start() {
         THERMALCONFIG=/etc/dsme/temp_surface
         THERMALTOOL=/usr/bin/dbus-send
         THERMALARGS="--system \
@@ -15,9 +16,6 @@ script
                      com.nokia.SystemInfo.GetConfigValue \
                      string:/certs/ccc/pp/thermal-manager-raw"
         THERMALPATTERN="byte 2"
-
-# sleep is not required, since sysinfod is service now and starting up per request if not started yet
-#        sleep 3
 
         rm -f $THERMALCONFIG
         if [ -x $THERMALTOOL ] ; then
@@ -30,14 +28,14 @@ script
 			120, 999, 2
 			EOF
                     /usr/sbin/dsmetool -a
-                    echo "Using wide thermal limits"
+                    einfo "Using wide thermal limits"
                 else
-                    echo "Using normal thermal limits"
+                    einfo "Using normal thermal limits"
                 fi
             else
-                echo "No thermal bits; using normal limits"
+                einfo "No thermal bits; using normal limits"
             fi
         else
-            echo "No thermal tool; using normal limits"
+            einfo "No thermal tool; using normal limits"
         fi
-end script
+}

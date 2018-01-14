@@ -1,39 +1,12 @@
-#! /bin/sh
-### BEGIN INIT INFO
-# Provides:		dsme-dbus
-# Required-Start:	dsme
-# Required-Stop:	dsme
-# Default-Start:	2 3 4 5
-# Default-Stop:		0 1 6
-### END INIT INFO
+#!/sbin/openrc-run
 
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-NAME=dsme-dbus
-DESC="Device state manager entity session bus"
+description="Connect dsme to dbus"
 
-set -e
-
-start_dsme_dbus()
-{
-        /usr/sbin/waitdbus system
-        /usr/sbin/dsmetool --start-dbus
+depend() {
+	after dbus dbus-actdead
 }
 
-case "$1" in
-start)
-	printf "Starting $DESC: $NAME"
-	start_dsme_dbus
-	printf ".\n"
-	;;
-
-stop|status)
-	# No-op
-	;;
-
-*)
-	printf "Usage: $INITFILE {start}\n" >&2
-	exit 1
-	;;
-esac
-
-exit 0
+start() {
+	/usr/sbin/waitdbus system
+	/usr/sbin/dsmetool --start-dbus
+}
