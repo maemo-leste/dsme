@@ -29,7 +29,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define OOM_ADJ_PATH            "/proc/self/oom_adj"
+#define OOM_ADJ_PATH            "/proc/self/oom_score_adj"
 #define OOM_ADJ_PROTECT_VALUE   (-17)
 #define OOM_ADJ_UNPROTECT_VALUE 0
 
