@@ -1,3 +1,9 @@
+dsme (0.60.52) unstable; urgency=medium
+
+  * Fix watchdog usage and upgrade to new oom_adj
+
+ -- Merlijn Wajer <merlijn@wizzu.p.org>  Mon, 29 Jan 2018 23:13:00 +0100
+
 dsme (0.60.51) unstable; urgency=medium
 
   * migrate to openrc init scripts
