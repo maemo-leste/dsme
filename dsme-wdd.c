@@ -349,12 +349,6 @@ int main(int argc, char *argv[])
         fprintf(stderr, ME "Couldn't lock to RAM: %s\n", strerror(errno));
     }
 
-    // do the first kick right away
-    if (!dsme_wd_init()) {
-        fprintf(stderr, ME "no WD's opened; WD kicking disabled\n");
-    }
-    dsme_wd_kick();
-
     // set up signal handler
     signal(SIGHUP,  signal_handler);
     signal(SIGINT,  signal_handler);
@@ -454,6 +448,14 @@ int main(int argc, char *argv[])
         set_nonblocking(to_child[1]);
         set_nonblocking(from_child[0]);
     }
+
+    // do the first kick after the fork, since calling close() on the WD fds
+    // in the child will cause the kernel to invalidate the parent fd as well
+    // (watchdog_release is called)
+    if (!dsme_wd_init()) {
+        fprintf(stderr, ME "no WD's opened; WD kicking disabled\n");
+    }
+    dsme_wd_kick();
 
     unsigned sleep_interval = DSME_HEARTBEAT_INTERVAL;
     fprintf(stderr,
