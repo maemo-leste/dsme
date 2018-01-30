@@ -39,6 +39,7 @@
 extern "C" {
 #endif
 
+bool dsme_wd_is_wd_fd(int fd);
 void dsme_wd_kick(void);
 bool dsme_wd_init(void);
 
