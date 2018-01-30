@@ -37,10 +37,6 @@
  *
  */
 
-#ifndef __cplusplus
-#define _GNU_SOURCE
-#endif
-
 #include "lifeguard.h"
 
 #include "spawn.h"

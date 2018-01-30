@@ -22,7 +22,6 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define _GNU_SOURCE
 #include "thermalsensor_omap.h"
 #include "dsme/logging.h"
 
