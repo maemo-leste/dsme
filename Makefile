@@ -6,7 +6,7 @@ SHELL := /bin/bash
 BINARIES     := dsme dsme-server dsme-exec-helper
 SUBDIRS      := util modules
 
-VERSION := 0.60.48
+VERSION := 0.61.0
 
 #
 # Install files in this directory
