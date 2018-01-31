@@ -27,14 +27,6 @@
 
 #include <stdbool.h>
 
-// Period for kicking; i.e. how soon the quickest watchdog will bite.
-// NOTE: This must be picked from the wd[] array in dsme-wdd-wd.c!
-#define DSME_SHORTEST_WD_PERIOD 14 // seconds
-
-// Period for heartbeat; i.e. how often we wakeup to kick watchdogs, etc.
-// We take a 2 second window for kicking the watchdogs.
-#define DSME_HEARTBEAT_INTERVAL (DSME_SHORTEST_WD_PERIOD - 2) // seconds
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -42,6 +34,9 @@ extern "C" {
 bool dsme_wd_is_wd_fd(int fd);
 void dsme_wd_kick(void);
 bool dsme_wd_init(void);
+
+// Period for heartbeat; i.e. how often we wakeup to kick watchdogs, etc.
+int dsme_wd_get_heartbeat_interval(void);
 
 #ifdef __cplusplus
 }

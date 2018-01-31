@@ -51,23 +51,42 @@
 
 
 typedef struct wd_t {
-    const char* file;   /* pathname of the watchdog device */
     int         period; /* watchdog timeout (s); 0 for keeping the default */
     const char* flag;   /* R&D flag in cal that disables the watchdog */
 } wd_t;
 
 /* the table of HW watchdogs; notice that their order matters! */
-#define SHORTEST DSME_SHORTEST_WD_PERIOD
-static const wd_t wd[] = {
-    /* path,               timeout (s), disabling R&D flag */
-    {  "/dev/twl4030_wdt", 30,          "no-ext-wd"  }, /* twl (ext) wd */
-    {  "/dev/watchdog",    SHORTEST,    "no-omap-wd" }  /* omap wd      */
+#define SHORTEST     14
+#define MAX_WD_COUNT 10
+
+static int shortest_timeout = SHORTEST;
+
+static const wd_t wd[MAX_WD_COUNT] = {
+    /* 10 entries: /dev/watchdog[0..9] */
+
+    /* timeout (s), disabling R&D flag */
+    {  SHORTEST,    "no-omap-wd" }, /* omap wd      */
+    {  30,          "no-ext-wd"  }, /* twl (ext) wd */
+    {  30,          "no-ext-wd"  },
+    {  30,          "no-ext-wd"  },
+    {  30,          "no-ext-wd"  },
+    {  30,          "no-ext-wd"  },
+    {  30,          "no-ext-wd"  },
+    {  30,          "no-ext-wd"  },
+    {  30,          "no-ext-wd"  },
+    {  30,          "no-ext-wd"  },
 };
 
 #define WD_COUNT (sizeof(wd) / sizeof(wd[0]))
 
 /* watchdog file descriptors */
-static int  wd_fd[WD_COUNT];
+static int wd_fd[WD_COUNT];
+
+int dsme_wd_get_heartbeat_interval(void)
+{
+  // We take a 2 second window for kicking the watchdogs.
+  return shortest_timeout - 2;
+}
 
 bool dsme_wd_is_wd_fd(int fd)
 {
@@ -93,15 +112,18 @@ void dsme_wd_kick(void)
                  errno == EAGAIN)
           {
               const char msg[] = "Got EAGAIN when kicking WD ";
+              char c = '0' + i;
+
               dummy = write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
-              dummy = write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
+              dummy = write(STDERR_FILENO, &c, 1);
               dummy = write(STDERR_FILENO, "\n", 1);
           }
           if (bytes_written != 1) {
               const char msg[] = "Error kicking WD ";
+              char c = '0' + i;
 
               dummy = write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
-              dummy = write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
+              dummy = write(STDERR_FILENO, &c, 1);
               dummy = write(STDERR_FILENO, "\n", 1);
 
               /* must not kick later wd's if an earlier one fails */
@@ -153,7 +175,7 @@ static void check_for_cal_wd_flags(bool wd_enabled[])
             for (i = 0; i < WD_COUNT; ++i) {
                 if (strstr(p, wd[i].flag)) {
                     wd_enabled[i] = false;
-                    fprintf(stderr, ME "WD kicking disabled: %s\n", wd[i].file);
+                    fprintf(stderr, ME "WD kicking disabled for watchdog: %d\n", i);
                 }
             }
         } else {
@@ -171,6 +193,16 @@ bool dsme_wd_init(void)
     bool wd_enabled[WD_COUNT];
     int  i;
 
+    /* we don't support more, all temp buffers are accounted for that value */
+    if (WD_COUNT > MAX_WD_COUNT)
+    {
+        fprintf(stderr,
+                ME "WD count %ld > maximum supported %d\n",
+                WD_COUNT,
+                MAX_WD_COUNT);
+        return false;
+    }
+
     for (i = 0; i < WD_COUNT; ++i) {
         wd_enabled[i] = true; /* enable all watchdogs by default */
         wd_fd[i]      = -1;
@@ -178,15 +210,19 @@ bool dsme_wd_init(void)
 
     /* disable the watchdogs that have a disabling R&D flag */
     check_for_cal_wd_flags(wd_enabled);
+    char watchdog_path[15];
 
     /* open enabled watchdog devices */
     for (i = 0; i < WD_COUNT; ++i) {
         if (wd_enabled[i]) {
-            wd_fd[i] = open(wd[i].file, O_RDWR);
+            snprintf(watchdog_path, sizeof(watchdog_path),
+                     "/dev/watchdog%d", i);
+            wd_fd[i] = open(watchdog_path, O_RDWR);
+
             if (wd_fd[i] == -1) {
                 fprintf(stderr,
                         ME "Error opening WD %s: %s\n",
-                        wd[i].file,
+                        watchdog_path,
                         strerror(errno));
             } else {
                 ++opened_wd_count;
@@ -195,19 +231,30 @@ bool dsme_wd_init(void)
                     fprintf(stderr,
                              ME "Setting WD period to %d s for %s\n",
                              wd[i].period,
-                             wd[i].file);
+                             watchdog_path);
+
                     /* set the wd period */
-                    /* ioctl() will overwrite tmp with the time left */
+                    /* ioctl() will overwrite tmp with the actual timeout set */
                     int tmp = wd[i].period;
-                    if (ioctl(wd_fd[i], WDIOC_SETTIMEOUT, &tmp) != 0) {
+                    int ret;
+                    ret = ioctl(wd_fd[i], WDIOC_SETTIMEOUT, &tmp);
+
+                    if (ret == 0) {
+                        if (tmp < shortest_timeout) {
+                            fprintf(stderr,
+                                    ME "Warning: returned timeout is shorter than %d, setting shortest_timeout to %d",
+                                    shortest_timeout, tmp);
+                            shortest_timeout = tmp;
+                          }
+                    } else {
                         fprintf(stderr,
                                  ME "Error setting WD period for %s\n",
-                                 wd[i].file);
+                                 watchdog_path);
                     }
                 } else {
                     fprintf(stderr,
                              ME "Keeping default WD period for %s\n",
-                             wd[i].file);
+                             watchdog_path);
                 }
             }
         }

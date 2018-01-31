@@ -454,10 +454,12 @@ int main(int argc, char *argv[])
         set_nonblocking(from_child[0]);
     }
 
-    unsigned sleep_interval = DSME_HEARTBEAT_INTERVAL;
+    unsigned sleep_interval = dsme_wd_get_heartbeat_interval();
+
     fprintf(stderr,
             ME "Entering main loop, with %u s interval\n",
             sleep_interval);
+
     mainloop(sleep_interval, to_child[1], from_child[0]);
     fprintf(stderr, ME "Exited main loop, quitting\n");
 

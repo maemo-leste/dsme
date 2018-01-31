@@ -35,10 +35,10 @@ static thermal_object_configuration_t memory_thermal_conf = {
   "memory",
   {
       /* (min, max], interval */
-      {    -1,  55,        30 / DSME_HEARTBEAT_INTERVAL }, /* NORMAL  */
-      {    55,  60,         5 / DSME_HEARTBEAT_INTERVAL }, /* WARNING */
-      {    60,  82,         1 / DSME_HEARTBEAT_INTERVAL }, /* ALERT   */
-      {    82,  99,         1 / DSME_HEARTBEAT_INTERVAL }  /* FATAL   */
+      {    -1,  55,        0 }, /* NORMAL  */
+      {    55,  60,        0 }, /* WARNING */
+      {    60,  82,        0 }, /* ALERT   */
+      {    82,  99,        0 }  /* FATAL   */
   },
   get_memory_temperature
 };
@@ -60,12 +60,25 @@ static bool get_memory_temperature(int* temperature)
 }
 
 
-void module_init(module_t* handle)
+void module_init(module_t *handle)
 {
   dsme_log(LOG_DEBUG, "libthermalobject_memory.so loaded");
 
   blacklisted = dsme_omap_is_blacklisted();
+
   if (!blacklisted) {
+      thermal_object_configuration_t *conf = memory_thermal_object.conf;
+
+      /* we set the interval here as earlier HB interval is still not known for
+       * sure
+       *
+       * XXX - check if intervals are really set to correct values
+       */
+      conf->state[0].interval = 30 / dsme_wd_get_heartbeat_interval();
+      conf->state[1].interval = 5 / dsme_wd_get_heartbeat_interval();
+      conf->state[2].interval = 1 / dsme_wd_get_heartbeat_interval();
+      conf->state[3].interval = 1 / dsme_wd_get_heartbeat_interval();
+
       dsme_register_thermal_object(&memory_thermal_object);
   }
 }
