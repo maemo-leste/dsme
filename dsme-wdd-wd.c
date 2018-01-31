@@ -197,7 +197,7 @@ bool dsme_wd_init(void)
     if (WD_COUNT > MAX_WD_COUNT)
     {
         fprintf(stderr,
-                ME "WD count %ld > maximum supported %d\n",
+                ME "WD count %zu > maximum supported %d\n",
                 WD_COUNT,
                 MAX_WD_COUNT);
         return false;
