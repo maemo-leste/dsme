@@ -1,3 +1,11 @@
+dsme (0.61.0) unstable; urgency=medium
+
+  * Do not close watchdog file descriptors when daemonizing.
+  * do not start/stop init scripts on install/upgrade
+  * Support for upstream kernel watchdogs /dev path
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Wed, 31 Jan 2018 21:19:22 +0200
+
 dsme (0.60.52) unstable; urgency=medium
 
   * Fix watchdog usage and upgrade to new oom_adj
