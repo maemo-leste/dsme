@@ -36,8 +36,6 @@
  *
  */
 
-#define _XOPEN_SOURCE
-
 #include "spawn.h"
 #include "heartbeat.h"
 

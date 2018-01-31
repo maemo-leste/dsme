@@ -24,8 +24,6 @@
 
 // TODO: add D-Bus filtering
 
-#define _DEFAULT_SOURCE
-
 #include "dsme_dbus.h"
 
 #include "dsme/logging.h"
