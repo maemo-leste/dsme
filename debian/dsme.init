@@ -18,8 +18,8 @@ start() {
 	echo $BOOTSTATE > /tmp/STATE
 
 	ebegin "About to exec dsme in state '$BOOTSTATE'."
-	exec /sbin/dsme -d -p /usr/lib/dsme/libstartup.so
-	#exec /sbin/dsme -d -l stderr -v 7 -p /usr/lib/dsme/libstartup.so
+	/sbin/dsme -d -p /usr/lib/dsme/libstartup.so
+	#/sbin/dsme -d -l stderr -v 7 -p /usr/lib/dsme/libstartup.so
 }
 
 start_post() {
