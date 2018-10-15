@@ -1,0 +1,19 @@
+Device State Management Entity (DSME)
+=====================================
+DSME is responsible of device state management, process lifeguard
+support, watch dogs and thermal management. DSME architecture is based
+on modular plugin architecture. DSME core provides message handling
+capabilities to modules. Each module is dynamically loaded library.
+DSME runs in a single process. The D-Bus interface provides services to
+request reboot, shutdown or powerup (from acting dead mode), indication
+of shutdown, thermal events and data save.
+
+Purpose
+=======
+Provides device state control logic and management interface.
+
+Description
+===========
+* Provides means for configuration and management interface.
+* Provides lifeguard CLI API for system service startup.
+* Manages device state including display, watchdog and startup.
