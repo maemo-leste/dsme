@@ -100,6 +100,23 @@ bool dsme_wd_is_wd_fd(int fd)
   return false;
 }
 
+void dsme_wd_close(void) {
+  int i;
+
+  fprintf(stderr, "dsme_wd_close\n");
+
+  for (i = 0; i < WD_COUNT; ++i) {
+      if (wd_fd[i] != -1) {
+          fprintf(stderr, "Closing watchdog\n");
+          while ((write(wd_fd[i], "V", 1) == -1) && errno == EAGAIN) {
+              fprintf(stderr, "Unable to write magic value to watchdog\n");
+          }
+          fprintf(stderr, "Wrote magic value; closing\n");
+          close(wd_fd[i]);
+      }
+  }
+}
+
 void dsme_wd_kick(void)
 {
   int i;

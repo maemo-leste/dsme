@@ -463,6 +463,8 @@ int main(int argc, char *argv[])
     mainloop(sleep_interval, to_child[1], from_child[0]);
     fprintf(stderr, ME "Exited main loop, quitting\n");
 
+    dsme_wd_close();
+
     // also bring dsme server down
     kill(pid, SIGTERM);
     (void)waitpid(pid, 0, 0);

@@ -34,6 +34,7 @@ extern "C" {
 bool dsme_wd_is_wd_fd(int fd);
 void dsme_wd_kick(void);
 bool dsme_wd_init(void);
+void dsme_wd_close(void);
 
 // Period for heartbeat; i.e. how often we wakeup to kick watchdogs, etc.
 int dsme_wd_get_heartbeat_interval(void);
