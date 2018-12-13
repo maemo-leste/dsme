@@ -1,3 +1,9 @@
+dsme (0.61.1) unstable; urgency=medium
+
+  * Close watchdogs with magic close command on exit, so that poweroff works
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Thu, 13 Dec 2018 16:04:37 +0100
+
 dsme (0.61.0) unstable; urgency=medium
 
   * Do not close watchdog file descriptors when daemonizing.
