@@ -1,3 +1,10 @@
+dsme (0.61.2) unstable; urgency=medium
+
+  * Increase debian compat level
+  * Move debug symbols to separate package
+
+ -- Arthur Demchenkov <spinal.by@gmail.com>  Sun, 16 Dec 2018 21:16:44 +0300
+
 dsme (0.61.1) unstable; urgency=medium
 
   * Close watchdogs with magic close command on exit, so that poweroff works
