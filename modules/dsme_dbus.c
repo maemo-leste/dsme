@@ -28,6 +28,7 @@
 
 #include "dsme/logging.h"
 #include "dsme/modules.h"
+#include "dsme/mainloop.h"
 
 #include <glib.h>
 #include <dbus/dbus.h>
@@ -118,17 +119,50 @@ static void message_send_and_delete(DsmeDbusMessage* msg)
   message_delete(msg);
 }
 
-
-static DBusConnection* system_bus(DBusError* error)
+static DBusHandlerResult
+dsme_dbus_filter(DBusConnection *con, DBusMessage *msg, void *aptr)
 {
-  DBusConnection* connection;
+  if (dbus_message_is_signal(msg, DBUS_INTERFACE_LOCAL, "Disconnected")) {
+      dsme_log(LOG_CRIT, "Disconnected from system bus.");
+      // TODO: dsme_main_loop_quit();
+    }
 
-  if (!(connection = dbus_bus_get(DBUS_BUS_SYSTEM, error))) {
-    dsme_log(LOG_DEBUG, "dbus_bus_get(): %s\n", error->message);
-    dbus_error_free(error);
-  }
+  return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+}
 
-  return connection;
+static DBusConnection *dsme_dbus_try_to_connect(DBusError *err)
+{
+  static DBusConnection *con = 0;
+
+  if (con)
+    goto EXIT;
+
+  if (!(con = dbus_bus_get(DBUS_BUS_SYSTEM, err)))
+    goto EXIT;
+
+  dbus_connection_add_filter(con, dsme_dbus_filter, 0, 0);
+  dbus_connection_set_exit_on_disconnect(con, FALSE);
+
+EXIT:
+  // NOTE: returns null or new reference
+  return con ? dbus_connection_ref(con) : 0;
+}
+
+static DBusConnection *dsme_dbus_get_connection(DBusError *error)
+{
+  DBusError       err = DBUS_ERROR_INIT;
+  DBusConnection *con = dsme_dbus_try_to_connect(&err);
+
+  if (!con) {
+      if (error)
+        dbus_move_error(&err, error);
+      else
+        dsme_log(LOG_DEBUG, "dbus_bus_get(): %s\n", err.message);
+    }
+  dbus_error_free(&err);
+
+  // NOTE: returns null or new reference
+  return con;
 }
 
 DsmeDbusMessage* dsme_dbus_signal_new(const char* path,
@@ -143,7 +177,7 @@ DsmeDbusMessage* dsme_dbus_signal_new(const char* path,
       dbus_error_init(&error);
 
       // TODO: we only use the system bus
-      if ((connection = system_bus(&error))) {
+      if ((connection = dsme_dbus_get_connection(&error))) {
           s = g_new(DsmeDbusMessage, 1);
 
           s->connection = connection;
@@ -471,8 +505,8 @@ static Filter* filter_new(void* child, FilterMessageHandler* handler)
   dbus_error_init(&error);
 
   // TODO: we only use the system bus
-  if ((connection = system_bus(&error)) == 0) {
-    dsme_log(LOG_ERR, "system_bus() failed: %s", error.message);
+  if ((connection = dsme_dbus_get_connection(&error)) == 0) {
+    dsme_log(LOG_ERR, "dsme_dbus_get_connection() failed: %s", error.message);
     dbus_error_free(&error);
   } else {
 
