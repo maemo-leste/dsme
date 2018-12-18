@@ -1,3 +1,10 @@
+dsme (0.61.3) unstable; urgency=medium
+
+  * Ensure that sendsigs doesn't kill dsme and dsme-server
+  * Ensure that dsme doesn't stop when system dbus goes down
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Tue, 18 Dec 2018 23:00:56 +0100
+
 dsme (0.61.2) unstable; urgency=medium
 
   * Increase debian compat level
