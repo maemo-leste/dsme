@@ -26,4 +26,14 @@ start_post() {
 	until waitfordsme; do
 		sleep 1
 	done
+
+	OMITDIR=/run/sendsigs.omit.d
+	mkdir -p $OMITDIR
+	pidof dsme > $OMITDIR/dsme.pid
+	pidof dsme-server > $OMITDIR/dsme-server.pid
+}
+
+stop() {
+	ebegin "Stopping dsme"
+	eend 0
 }
