@@ -190,12 +190,16 @@ static dsme_state_t select_state(void)
           } else if (reboot_requested) {
               dsme_log(LOG_CRIT, "Reboot");
               state = DSME_STATE_REBOOT;
-          } else{
+          } else {
+              /*
               dsme_log(LOG_CRIT,
                        "Actdead (charger: %s, alarm: %s)",
                        charger_state == CHARGER_CONNECTED ? "on"  : "off(?)",
                        alarm_set                          ? "set" : "not set");
               state = DSME_STATE_ACTDEAD;
+              */
+              dsme_log(LOG_CRIT, "Normal shutdown");
+              state = DSME_STATE_SHUTDOWN;
           }
       } else {
           state = DSME_STATE_USER;
