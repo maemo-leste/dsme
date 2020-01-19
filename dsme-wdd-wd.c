@@ -227,7 +227,7 @@ bool dsme_wd_init(void)
 
     /* disable the watchdogs that have a disabling R&D flag */
     check_for_cal_wd_flags(wd_enabled);
-    char watchdog_path[15];
+    char watchdog_path[32];
 
     /* open enabled watchdog devices */
     for (i = 0; i < WD_COUNT; ++i) {
