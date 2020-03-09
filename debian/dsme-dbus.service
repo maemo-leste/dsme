@@ -1,0 +1,5 @@
+[Unit]
+Description=Connect DSME to D-Bus
+
+[Service]
+ExecStart=/usr/sbin/dsmetool --start-dbus
