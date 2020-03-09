@@ -1,3 +1,10 @@
+dsme (0.61.6) unstable; urgency=medium
+
+  * Add cross-compiling support
+  * Add systemd support
+
+ -- Arthur Demchenkov <spinal.by@gmail.com>  Mon, 09 Mar 2020 23:22:11 +0300
+
 dsme (0.61.5) unstable; urgency=medium
 
   * Fix format truncation compilation error.
