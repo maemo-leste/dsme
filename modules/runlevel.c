@@ -81,8 +81,30 @@ static void shutdown(dsme_runlevel_t runlevel)
            runlevel == DSME_RUNLEVEL_REBOOT   ? "Reboot"   :
                                                 "Malf");
 
+  /* If we have systemd, use systemctl commands */
+  if (access("/bin/systemctl", X_OK) == 0)
+  {
+      char command[64];
+
+      if (runlevel == DSME_RUNLEVEL_SHUTDOWN ||
+          runlevel == DSME_RUNLEVEL_MALF)
+      {
+          snprintf(command, sizeof(command), "/bin/systemctl --no-block poweroff");
+      }
+      else
+      {
+          snprintf(command, sizeof(command), "/bin/systemctl --no-block reboot");
+      }
+
+      dsme_log(LOG_NOTICE, "Issuing %s", command);
+      if (system(command) != 0)
+      {
+          dsme_log(LOG_WARNING, "command %s failed: %m", command);
+          /* We ignore error. No retry or anything else */
+      }
+  }
   /* If runlevel change fails, handle the shutdown/reboot by DSME */
-  if (access("/sbin/telinit", X_OK) != 0 || !change_runlevel(runlevel))
+  else if (access("/sbin/telinit", X_OK) != 0 || !change_runlevel(runlevel))
   {
       dsme_log(LOG_CRIT, "Doing forced shutdown/reboot");
       sync();
