@@ -77,6 +77,10 @@ static void usage(const char *  progname)
                     "Logging type (syslog, sti, stderr, stdout, none)\n");
   fprintf(stderr, " -v  --verbosity   Log verbosity (3..7)\n");
 #endif
+#ifdef DSME_SYSTEMD_ENABLE
+  fprintf(stderr, " -s  --systemd     "
+                    "Signal systemd when initialization is done\n");
+#endif
   fprintf(stderr, " -h  --help        Help\n");
 }
 
@@ -101,19 +105,26 @@ static int        logging_verbosity = LOG_INFO;
 static log_method logging_method    = LOG_METHOD_SYSLOG;
 #endif
 
+#ifdef DSME_SYSTEMD_ENABLE
+static int signal_systemd = 0;
+#endif
+
 static void parse_options(int      argc,           /* in  */
                           char*    argv[],         /* in  */
                           GSList** module_names)   /* out */
 {
   int          next_option;
   const char*  program_name  = argv[0];
-  const char*  short_options = "dhp:l:v:";
+  const char*  short_options = "dhsp:l:v:";
   const struct option long_options[] = {
         { "startup-module", 1, NULL, 'p' },
         { "help",           0, NULL, 'h' },
         { "verbosity",      0, NULL, 'v' },
 #ifdef DSME_LOG_ENABLE  
         { "logging",        0, NULL, 'l' },
+#endif
+#ifdef DSME_SYSTEMD_ENABLE
+        { "systemd",        0, NULL, 's' },
 #endif
         { 0, 0, 0, 0 }
   };
@@ -165,6 +176,12 @@ static void parse_options(int      argc,           /* in  */
           fprintf(stderr, ME "Logging not compiled in\n");
           break;
 #endif  
+#ifdef DSME_SYSTEMD_ENABLE
+        case 's': /* -s or --systemd */
+          signal_systemd = 1;
+          break;
+#endif
+
         case 'h': /* -h or --help */
           usage(program_name);
           exit(EXIT_SUCCESS);
@@ -269,6 +286,15 @@ int main(int argc, char *argv[])
       dsme_log(LOG_CRIT, "chdir failed: %s", strerror(errno));
       return EXIT_FAILURE;
   }
+
+#ifdef DSME_SYSTEMD_ENABLE
+  /* Inform main process that we are ready
+   * Main process will inform systemd
+   */
+  if (signal_systemd) {
+      kill(getppid(), SIGUSR1);
+  }
+#endif
 
   dsme_log(LOG_DEBUG, "Entering main loop");
   dsme_main_loop_run(process_message_queue);

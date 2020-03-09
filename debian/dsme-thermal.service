@@ -1,0 +1,5 @@
+[Unit]
+Description=Select thermal limits
+
+[Service]
+ExecStart=/usr/lib/dsme/dsme-thermal
