@@ -79,6 +79,7 @@ install:
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
 	#mkdir $(CURDIR)/debian/tmp/etc/dsme
 	install -m 440  lifeguard.uids $(CURDIR)/debian/tmp/etc/dsme/
+	install -m 755  scripts/dsme-thermal $(CURDIR)/debian/tmp/usr/lib/dsme/
 
 	# install tests (if needed)
 ifneq (,$(findstring testcases,$(DEB_BUILD_OPTIONS)))
