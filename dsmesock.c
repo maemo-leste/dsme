@@ -35,6 +35,10 @@
 #include <sys/un.h>
 #include <sys/stat.h>
 #include <syslog.h>
+#include <errno.h>
+#ifdef DSME_SYSTEMD_ENABLE
+#include <systemd/sd-daemon.h>
+#endif
 
 
 static gboolean accept_client(GIOChannel*  source,
@@ -67,6 +71,22 @@ int dsmesock_listen(dsmesock_callback* read_and_queue)
   int                fd;
   struct sockaddr_un laddr;
 
+#ifdef DSME_SYSTEMD_ENABLE
+  int n = sd_listen_fds(0);
+
+  if (n > 1)
+  {
+    /* Too many file descriptors received */
+    errno = E2BIG;
+    goto fail;
+  }
+  else if (n == 1)
+  {
+    fd = SD_LISTEN_FDS_START;
+    goto fd_ready;
+  }
+#endif
+
   dsmesock_filename = getenv("DSME_SOCKFILE");
   if (!dsmesock_filename || !(*dsmesock_filename)) {
     dsmesock_filename = "/tmp/dsmesock";
@@ -96,6 +116,9 @@ int dsmesock_listen(dsmesock_callback* read_and_queue)
       goto close_and_fail;
   }
 
+#ifdef DSME_SYSTEMD_ENABLE
+fd_ready:
+#endif
   if (!(as_chan = g_io_channel_unix_new(fd))) {
     goto close_and_fail;
   }

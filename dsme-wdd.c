@@ -45,6 +45,9 @@
 #include <sched.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
+#ifdef DSME_SYSTEMD_ENABLE
+#include <systemd/sd-daemon.h>
+#endif
 
 #define STRINGIFY(x)  STRINGIFY2(x)
 #define STRINGIFY2(x) #x
@@ -178,6 +181,12 @@ void signal_handler(int sig)
         case SIGTERM:
             run = false;
             break;
+#ifdef DSME_SYSTEMD_ENABLE
+        case SIGUSR1:
+            /* Inform systemd that server is initialized */
+            sd_notify(0, "READY=1");
+            break;
+#endif
     }
 }
 
@@ -192,12 +201,15 @@ static void parse_options(int   argc,   /* in  */
 {
     int          next_option;
     const char*  program_name  = argv[0];
-    const char*  short_options = "dhp:l:v:";
+    const char*  short_options = "dhsp:l:v:";
     const struct option long_options[] = {
         { "help",           0, NULL, 'h' },
         { "verbosity",      0, NULL, 'v' },
 #ifdef DSME_LOG_ENABLE  
         { "logging",        0, NULL, 'l' },
+#endif
+#ifdef DSME_SYSTEMD_ENABLE
+        { "systemd",        0, NULL, 's' },
 #endif
         { "daemon",         0, NULL, 'd' },
         { 0, 0, 0, 0 }
@@ -360,6 +372,9 @@ int main(int argc, char *argv[])
     signal(SIGTERM, signal_handler);
     signal(SIGPIPE, signal_handler);
     signal(SIGCHLD, signal_handler);
+#ifdef DSME_SYSTEMD_ENABLE
+    signal(SIGUSR1, signal_handler);
+#endif
 
 
     // protect from oom

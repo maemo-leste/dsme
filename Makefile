@@ -60,6 +60,11 @@ ifneq (,$(findstring DSME_MEMORY_THERMAL_MGMT,$(C_DEFINES)))
 export DSME_MEMORY_THERMAL_MGMT = yes
 endif
 
+ifeq (,$(wildcard /etc/devuan_version))
+	LIBSYSTEMD := libsystemd
+	C_DEFINES  += DSME_SYSTEMD_ENABLE
+endif
+
 #
 # Target composition and overrides
 #
@@ -71,6 +76,7 @@ dsme: C_GENFLAGS  := -DPRG_VERSION=$(VERSION) -g -std=c99 \
                      -Wall -Wwrite-strings -Wmissing-prototypes -Werror -Wno-unused-but-set-variable
 dsme_LIBS         := cal
 dsme: LD_GENFLAGS :=
+dsme: LD_EXTRA_GENFLAGS := $$(pkg-config --libs $(LIBSYSTEMD))
 
 
 # dsme-server
@@ -78,7 +84,7 @@ dsme-server_C_OBJS             := dsme-server.o modulebase.o timers.o \
                                   logging.o oom.o mainloop.o          \
                                   dsme-cal.o dsmesock.o
 dsme-server_LIBS               := dsme dl cal
-dsme-server: LD_EXTRA_GENFLAGS := -rdynamic $$(pkg-config --libs gthread-2.0)
+dsme-server: LD_EXTRA_GENFLAGS := -rdynamic $$(pkg-config --libs gthread-2.0 $(LIBSYSTEMD))
 
 #logging.o: C_EXTRA_DEFINES :=  USE_STDERR
 dsme-server.o : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
