@@ -229,7 +229,7 @@ static void parse_options(int   argc,   /* in  */
                 usage(program_name);
                 break;
 
-            case '?': /* Unreckgnized option */
+            case '?': /* Unrecognized option */
                 usage(program_name);
                 break;
         }
