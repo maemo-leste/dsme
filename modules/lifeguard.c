@@ -672,11 +672,7 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_START, client, msg)
   }
 
   /* set oom_adj */
-  if (msg->oom_adj != 0) {
-      process->oom_adj = msg->oom_adj;
-  } else {
-      process->oom_adj = 0;
-  }
+  process->oom_adj = msg->oom_adj;
 
   if (process->action == RESET && ucred->uid != 0) {
       if (g_slist_find(uids, GUINT_TO_POINTER(process->uid))) {
