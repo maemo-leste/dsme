@@ -484,7 +484,7 @@ int main(int argc, char *argv[])
     kill(pid, SIGTERM);
     (void)waitpid(pid, 0, 0);
 
-    if (remove(DSME_PID_FILE) < 0) {
+    if (daemon && remove(DSME_PID_FILE) < 0) {
         fprintf(stderr, ME "Couldn't remove lockfile\n");
     }
 
