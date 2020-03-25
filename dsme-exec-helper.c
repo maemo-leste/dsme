@@ -92,7 +92,7 @@ static void non_async_signal_safe_child_setup(const char* cmdline,
   if (oom_adj != 0) {
       if (!adjust_oom(oom_adj)) {
           fprintf(stderr,
-                  "'%s' failed to set oom_adj; Unprotecting from OOM",
+                  "'%s' failed to set oom_score_adj; Unprotecting from OOM",
                   cmdline);
           if (!unprotect_from_oom()) {
               fprintf(stderr, "'%s' failed to unprotect from OOM", cmdline);

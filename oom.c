@@ -2,7 +2,7 @@
    @file oom.c
 
    This file implements functions to protect/unprotect from the OOM killer
-   by setting the appropriate value to oom_adj.
+   by setting the appropriate value to oom_score_adj.
    <p>
    Copyright (C) 2006-2009 Nokia Corporation.
 
@@ -30,7 +30,7 @@
 #include <unistd.h>
 
 #define OOM_ADJ_PATH            "/proc/self/oom_score_adj"
-#define OOM_ADJ_PROTECT_VALUE   (-17)
+#define OOM_ADJ_PROTECT_VALUE   (-1000)
 #define OOM_ADJ_UNPROTECT_VALUE 0
 
 static bool set_oom_adj_value(int i)
