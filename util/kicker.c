@@ -43,7 +43,7 @@
 
 #include <cal.h>
 
-#define OOM_ADJ_VALUE -17
+#define OOM_ADJ_VALUE -1000
 
 
 typedef struct wd_t {
@@ -68,7 +68,7 @@ static int protect_from_oom(void)
       int ret = -1;
       char filename[128];
 
-      if (sprintf(filename, "/proc/%i/oom_adj", getpid()) < 0) {
+      if (sprintf(filename, "/proc/%i/oom_score_adj", getpid()) < 0) {
               fprintf(stderr, "file: %s\n", filename);
               return -1;
       }

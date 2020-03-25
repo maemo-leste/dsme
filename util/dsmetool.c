@@ -91,7 +91,7 @@ void usage(const char* name)
 "                                   from groupname\n"
 "  -n --nice=N                     Set used nice value (priority)\n"
 "                                   for started process\n"
-"  -m --oom-adj=N                  Set oom_adj value for started process\n"
+"  -m --oom-adj=N                  Set oom_score_adj value for started process\n"
 "  -d --start-dbus                 Start DSME's D-Bus services\n"
 #if 0 // TODO
 "  -s --stop-dbus                  Stop DSME's D-Bus services\n"
