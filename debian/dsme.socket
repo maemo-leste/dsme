@@ -1,9 +1,0 @@
-[Unit]
-Description=Device State Manager Entity Socket
-
-[Socket]
-ListenStream=/tmp/dsmesock
-SocketMode=0646
-
-[Install]
-WantedBy=sockets.target
