@@ -1,3 +1,11 @@
+dsme (0.61.7) unstable; urgency=medium
+
+  * Add LSB headers to init scripts
+  * OOM protection fixes
+  * Drop socket activation logic (systemd)
+
+ -- Arthur Demchenkov <spinal.by@gmail.com>  Mon, 23 Mar 2020 20:15:24 +0300
+
 dsme (0.61.6) unstable; urgency=medium
 
   * Add cross-compiling support
