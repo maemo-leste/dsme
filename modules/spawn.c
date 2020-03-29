@@ -49,8 +49,7 @@
 
 #define DSME_STATIC_STRLEN(s) (sizeof(s) - 1)
 
-// TODO: is /sbin/ the right place for the exec helper?
-#define DSME_EXEC_HELPER_PATH "/sbin/dsme-exec-helper"
+#define DSME_EXEC_HELPER_PATH "/usr/lib/dsme/dsme-exec-helper"
 
 
 static void announce_child_exit(GPid pid, gint status, gpointer unused);

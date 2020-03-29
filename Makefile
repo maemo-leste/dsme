@@ -18,6 +18,7 @@ INSTALL_GROUP := $(shell id -g)
 INSTALL_BINARIES                      := dsme dsme-server dsme-exec-helper
 $(INSTALL_BINARIES)    : INSTALL_PERM := 755
 $(INSTALL_BINARIES)    : INSTALL_DIR  := $(DESTDIR)/sbin
+dsme-exec-helper       : INSTALL_DIR  := $(DESTDIR)/usr/lib/dsme
 
 INSTALL_INCLUDES                      := include/dsme/dsme-cal.h     \
                                          include/dsme/dsmesock.h     \
