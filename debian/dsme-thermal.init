@@ -1,12 +1,8 @@
 #!/sbin/openrc-run
-### BEGIN INIT INFO
-# Provides:          dsme-thermal
-# Required-Start:    $remote_fs dbus
-# Required-Stop:
-# Default-Start:     2 3 4 5
-# Default-Stop:
-# Short-Description: Select thermal limits
-### END INIT INFO
+
+depend() {
+	after dbus dbus-actdead
+}
 
 start() {
 	/usr/lib/dsme/dsme-thermal

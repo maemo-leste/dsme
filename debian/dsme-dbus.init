@@ -1,12 +1,9 @@
 #!/sbin/openrc-run
-### BEGIN INIT INFO
-# Provides:          dsme-dbus
-# Required-Start:    $remote_fs dbus
-# Required-Stop:
-# Default-Start:     2 3 4 5
-# Default-Stop:
-# Short-Description: Connect DSME to D-Bus
-### END INIT INFO
+description="Connect DSME to D-Bus"
+
+depend() {
+	after dbus dbus-actdead
+}
 
 start() {
 	/usr/sbin/waitdbus system

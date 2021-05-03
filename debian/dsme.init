@@ -1,12 +1,8 @@
 #!/sbin/openrc-run
-### BEGIN INIT INFO
-# Provides:          dsme
-# Required-Start:    $remote_fs $syslog bootmisc
-# Required-Stop:
-# Default-Start:     2 3 4 5
-# Default-Stop:
-# Short-Description: Device State Manager Entity
-### END INIT INFO
+
+depend() {
+	after bootmisc rsyslog
+}
 
 start() {
 	if [ -f "/var/lib/dsme/saved_state" ]
