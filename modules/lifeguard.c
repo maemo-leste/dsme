@@ -103,6 +103,14 @@ typedef struct {
 	int               restart_period;
 } dsme_process_t;
 
+/**
+ * Contains client to announce process exit when all pids in the group are
+ * gone.
+ */
+typedef struct {
+    endpoint_t*       client;
+    GSList*           pids;
+} dsme_kill_group_t;
 
 static int deleteprocess(dsme_process_t * process);
 static void send_reset_request();
@@ -346,6 +354,10 @@ static GSList* processes = 0;
  */
 static GSList* uids = 0;
 
+/**
+ * List of kill groups to announce when processes are exited
+ */
+static GSList* kill_groups = 0;
 
 static bool scan_uid(const char* line, uid_t* uid)
 {
@@ -726,16 +738,12 @@ cleanup:
 
 DSME_HANDLER(DSM_MSGTYPE_PROCESS_STOP, client, msg)
 {
-  DSM_MSGTYPE_PROCESS_STOPSTATUS returnmsg =
-      DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_STOPSTATUS);
-  returnmsg.killed = false;
   const char* info = "not found, not root or kill failed";
-
   GSList*             ptr;
   const struct ucred* ucred;
   const char*         command;
   size_t              command_size;
-
+  dsme_kill_group_t*  group = 0;
   ucred = endpoint_ucred(client);
   if (!ucred) {
       info = "failed to get ucred";
@@ -783,11 +791,16 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_STOP, client, msg)
                        proc->pid, msg->signal,
                        strerror(errno));
           } else {
+              if (!group) {
+                  group = malloc(sizeof(*group));
+                  memset(group, 0, sizeof(*group));
+                  group->client = endpoint_copy(client);
+              }
+              group->pids = g_slist_append(group->pids,
+                                           GINT_TO_POINTER(proc->pid));
               proc->action = ONCE;
-              returnmsg.killed = true;
-              info             = "killed";
               dsme_log(LOG_DEBUG,
-                       "process %d killed with signal %d",
+                       "killing process %d with signal %d",
                        proc->pid,
                        msg->signal);
           }
@@ -798,7 +811,15 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_STOP, client, msg)
   }
 
 cleanup:
-  endpoint_send_with_extra(client, &returnmsg, strlen(info) + 1, info);
+  if (group) {
+      kill_groups = g_slist_append(kill_groups, group);
+  } else {
+      DSM_MSGTYPE_PROCESS_STOPSTATUS returnmsg =
+      DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_STOPSTATUS);
+      returnmsg.killed = false;
+
+      endpoint_send_with_extra(client, &returnmsg, strlen(info) + 1, info);
+  }
 }
 
 static void send_reset_request()
@@ -831,6 +852,33 @@ static void send_lifeguard_notice(u_int32_t type, const char* command)
 
   broadcast_with_extra(&msg, strlen(command) + 1, command);
   dsme_log(LOG_DEBUG, "Lifeguard notice message sent!");
+}
+
+static void send_stop_response(pid_t pid)
+{
+    GSList* ptr;
+    GSList* next;
+
+  for (ptr = kill_groups; ptr; ptr = next) {
+      dsme_kill_group_t* group = ptr->data;
+      next = g_slist_next(ptr);
+
+      if (g_slist_find(group->pids, GINT_TO_POINTER(pid))) {
+          group->pids = g_slist_remove(group->pids, GINT_TO_POINTER(pid));
+          if (!group->pids) {
+              DSM_MSGTYPE_PROCESS_STOPSTATUS returnmsg =
+                      DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_STOPSTATUS);
+              const char* info = "killed";
+              dsme_log(LOG_DEBUG, "process %d killed", pid);
+              returnmsg.killed = true;
+              endpoint_send_with_extra(group->client, &returnmsg,
+                                       strlen(info) + 1, info);
+              endpoint_free(group->client);
+              kill_groups = g_slist_delete_link(kill_groups, ptr);
+              free(group);
+          }
+      }
+  }
 }
 
 DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
@@ -870,7 +918,9 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
                        proc->pid,
                        reason,
                        reason_value);
+              pid_t pid = proc->pid;
               deleteprocess(proc);
+              send_stop_response(pid);
               break;
 
             case RESPAWN: /* FALLTHRU */
@@ -1221,7 +1271,9 @@ void module_fini(void)
         spawn_shutdown();
 
         while (processes) {
-		deleteprocess((dsme_process_t*)processes->data);
+		dsme_process_t* process = processes->data;
+		send_stop_response(process->pid);
+		deleteprocess(process);
 	}
 
         g_slist_free(uids);
