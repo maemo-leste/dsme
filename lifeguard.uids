@@ -2,4 +2,4 @@
 # Root (0) is always capable, no need to specify it here
 
 # the UID used for applications
-29999
+1000

@@ -1,3 +1,11 @@
+dsme (0.61.8) unstable; urgency=medium
+
+  * lifeguard: Wait until process is really killed before announcing
+  * allow user 1000 to use lifeguard
+  * remove LSB headers from init scripts
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Tue, 31 Aug 2021 07:18:42 +0300
+
 dsme (0.61.7) unstable; urgency=medium
 
   * Add LSB headers to init scripts
