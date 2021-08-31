@@ -87,20 +87,20 @@ static char lg_reboot_enabled = 1;
  * started. Contains also the policy for process exit and possible retry count.
  */
 typedef struct {
-	char*             command;
-	pid_t             pid;
-	uid_t             uid;
-	gid_t             gid;
-	int               nice;
-	int               oom_adj;
-	time_t            starttime;
-	GSList*           node;
-	process_actions_t action;
-	char**            env;
-	int               first_restart_time;
-	int               restart_count;
-	int               restart_limit;
-	int               restart_period;
+    char*             command;
+    pid_t             pid;
+    uid_t             uid;
+    gid_t             gid;
+    int               nice;
+    int               oom_adj;
+    time_t            starttime;
+    GSList*           node;
+    process_actions_t action;
+    char**            env;
+    int               first_restart_time;
+    int               restart_count;
+    int               restart_limit;
+    int               restart_period;
 } dsme_process_t;
 
 /**
@@ -134,12 +134,12 @@ static int update_restart_count(const char* process);
 #define LG_RESETS_TEMP  LG_RESETS_PATH".tmp"
 #define LG_RESETS_BACK  LG_RESETS_PATH".bak"
 
-#define numof(a) (sizeof(a)/sizeof*(a))
+#define numof(a) (sizeof(a) / sizeof*(a))
 
 typedef struct statitem_t {
-  unsigned lru;
-  unsigned cnt;
-  char     name[56];
+    unsigned          lru;
+    unsigned          cnt;
+    char              name[56];
 } statitem_t;
 
 static unsigned    lg_lrutag;
@@ -152,127 +152,157 @@ static volatile unsigned resets_out   = 0;
 static volatile unsigned restarts_in  = 0;
 static volatile unsigned restarts_out = 0;
 
-static int statitem_cmp(const void *a, const void *b) {
+static int statitem_cmp(const void* a, const void* b) {
   const statitem_t *A = *(const statitem_t **)a;
   const statitem_t *B = *(const statitem_t **)b;
   return (A->lru > B->lru) - (A->lru < B->lru);
 }
 
-static inline int statitem_is_named(const statitem_t *itm, const char *name) {
+static inline int statitem_is_named(const statitem_t* itm, const char *name)
+{
   return !strncmp(itm->name, name, sizeof itm->name - 1);
 }
 
-static inline int statitem_is_used(const statitem_t *itm) {
+static inline int statitem_is_used(const statitem_t* itm) {
   return itm->name[0] != 0;
 }
 
-static void statitem_hit(statitem_t *itm, const char *name, unsigned cnt) {
-  if( !statitem_is_named(itm, name) )
-    itm->cnt = *itm->name = 0, strncat(itm->name, name, sizeof itm->name - 1);
+static void statitem_hit(statitem_t* itm, const char *name, unsigned cnt)
+{
+  if (!statitem_is_named(itm, name)) {
+      itm->cnt = *itm->name = 0, strncat(itm->name, name, sizeof itm->name - 1);
+  }
   itm->lru = ++lg_lrutag;
   itm->cnt += cnt;
 }
 
-static void statitem_add_hit(statitem_t *arr, size_t n, const char *name) {
+static void statitem_add_hit(statitem_t* arr, size_t n, const char* name)
+{
   statitem_t *itm, *end;
-  for( itm = arr, end = arr+n; arr != end ; ++arr ) {
-    if( !statitem_is_used(arr) || statitem_is_named(arr, name) ) {
-      itm = arr; break; 
-    }
-    if( itm->lru > arr->lru ) { itm = arr; }
+  for (itm = arr, end = arr+n; arr != end ; ++arr) {
+      if (!statitem_is_used(arr) || statitem_is_named(arr, name)) {
+          itm = arr; break;
+      }
+      if(itm->lru > arr->lru) {
+          itm = arr;
+      }
   }
   statitem_hit(itm, name, 1);
 }
 
 #if 0
-static void statitem_show(const statitem_t *arr, size_t n) {
-  const statitem_t **ord = malloc(n * sizeof *ord);
+static void statitem_show(const statitem_t* arr, size_t n)
+{
+  const statitem_t** ord = malloc(n * sizeof(*ord));
   size_t i;
-  for( i = 0; i < n; ++i ) ord[i] = &arr[i];
-  qsort(ord, n, sizeof *ord, statitem_cmp);
+
+  for (i = 0; i < n; ++i) {
+      ord[i] = &arr[i];
+  }
+  qsort(ord, n, sizeof(*ord), statitem_cmp);
 
   printf("--\n");
-  for( i = 0; i < n; ++i ) {
-    if( statitem_is_used((arr = ord[i])) )
-      printf("lru=%03d, cnt=%03d, name=%s\n", arr->lru, arr->cnt, arr->name);
+  for (i = 0; i < n; ++i ) {
+      if (statitem_is_used((arr = ord[i]))) {
+          printf("lru=%03d, cnt=%03d, name=%s\n", arr->lru, arr->cnt,
+                 arr->name);
+      }
   }
   free(ord);
 }
 #endif
 
-static void statitem_load(statitem_t *arr, size_t n, const char *path) {
-  FILE  *file = 0;
-  char  *buff = 0;
+static void statitem_load(statitem_t* arr, size_t n, const char *path)
+{
+  FILE*  file = 0;
+  char*  buff = 0;
   size_t size = 0;
   size_t i = 0;
-  char  *sep;
-  memset(arr, 0, n * sizeof *arr);
+  char*  sep;
+  memset(arr, 0, n * sizeof(*arr));
 
-  if( (file = fopen(path, "r")) == 0 ) {
-    dsme_log_raw(LOG_ERR, "can't load %s: %s\n", path, strerror(errno));
-  }
-  else {
-    while( getline(&buff, &size, file) != -1 ) {
-      if( (sep = strrchr(buff, ':')) != 0 )
-	*sep++ = 0, statitem_hit(&arr[i++%n], buff, strtoul(sep,0,0));
-    }
-    fclose(file);
+  if ((file = fopen(path, "r")) == 0) {
+      dsme_log_raw(LOG_ERR, "can't load %s: %s\n", path, strerror(errno));
+  } else {
+      while (getline(&buff, &size, file) != -1) {
+          if ((sep = strrchr(buff, ':')) != 0)
+              *sep++ = 0, statitem_hit(&arr[i++%n], buff, strtoul(sep,0,0));
+      }
+      fclose(file);
   }
   free(buff);
 }
 
-static int statitem_save(const statitem_t *arr, size_t n, const char *path) {
-  int ok = 0;
-  FILE *file = 0;
-  const statitem_t **ord = 0;
-  size_t i,m;
+static int statitem_save(const statitem_t* arr, size_t n, const char* path)
+{
+  int                ok = 0;
+  FILE*              file = 0;
+  const statitem_t** ord = 0;
+  size_t             i,m;
   
-  if( (ord = malloc(n * sizeof *ord)) == 0 )
-    goto cleanup;
+  if ((ord = malloc(n * sizeof(*ord))) == 0) {
+      goto cleanup;
+  }
   
-  for( i = m = 0; i < n; ++i )
-    if( statitem_is_used(arr+i) ) ord[m++] = arr+i;
-  qsort(ord, m, sizeof *ord, statitem_cmp);
+  for (i = m = 0; i < n; ++i) {
+      if (statitem_is_used(arr+i)) {
+          ord[m++] = arr+i;
+      }
+      qsort(ord, m, sizeof(*ord), statitem_cmp);
+  }
 
-  if( (file = fopen(path, "w")) == 0 ) {
-    dsme_log_raw(LOG_ERR, "can't save %s: %s\n", path, strerror(errno));
-    goto cleanup;
+  if ((file = fopen(path, "w")) == 0) {
+      dsme_log_raw(LOG_ERR, "can't save %s: %s\n", path, strerror(errno));
+      goto cleanup;
   }
   
-  for( i = 0; i < m ; ++i )
-    if( fprintf(file, "%s: %u\n", ord[i]->name, ord[i]->cnt) < 0 )
-      break;
-  
-  if( ferror(file) || fflush(file) == EOF ) {
-    dsme_log_raw(LOG_ERR, "can't write %s: %s\n", path, strerror(errno));
-    goto cleanup;
+  for (i = 0; i < m ; ++i) {
+      if (fprintf(file, "%s: %u\n", ord[i]->name, ord[i]->cnt) < 0) {
+          break;
+      }
   }
   
-  if( fsync(fileno(file)) == -1 ) {
-    dsme_log_raw(LOG_ERR, "can't sync %s: %s\n", path, strerror(errno));
-    goto cleanup;
+  if (ferror(file) || fflush(file) == EOF) {
+      dsme_log_raw(LOG_ERR, "can't write %s: %s\n", path, strerror(errno));
+      goto cleanup;
+  }
+  
+  if (fsync(fileno(file)) == -1) {
+      dsme_log_raw(LOG_ERR, "can't sync %s: %s\n", path, strerror(errno));
+      goto cleanup;
   }
   
   ok = 1;
   cleanup:
   
-  if( file != 0 && fclose(file) == EOF )
-    dsme_log_raw(LOG_WARNING, "can't close %s: %s\n", path, strerror(errno));
+  if (file != 0 && fclose(file) == EOF) {
+      dsme_log_raw(LOG_WARNING, "can't close %s: %s\n", path, strerror(errno));
+  }
 
   free(ord);
   
   return ok;
 }
 
-static void cycle(const char *temp, const char *path, const char *back) {
-  if( access(temp, F_OK) == 0 )
-    rename(path, back), rename(temp, path);
+static void cycle(const char* temp, const char* path, const char* back)
+{
+  if (access(temp, F_OK) == 0) {
+      rename(path, back), rename(temp, path);
+  }
 }
 
-static const char *oneof(const char *temp, const char *path, const char *back) {
-  if( access(path, F_OK) == 0 ) return path;
-  if( access(back, F_OK) == 0 ) return back;
-  if( access(temp, F_OK) == 0 ) return temp;
+static const char* oneof(const char* temp, const char* path, const char* back)
+{
+  if (access(path, F_OK) == 0) {
+      return path;
+  }
+  if (access(back, F_OK) == 0) {
+      return back;
+  }
+  if (access(temp, F_OK) == 0) {
+      return temp;
+  }
+
   return path;
 }
 
@@ -280,23 +310,28 @@ static const char *oneof(const char *temp, const char *path, const char *back) {
  * restarts
  * ------------------------------------------------------------------------- */
 
-static void lg_restarts_load(void) {
-  const char *path = oneof(LG_RESTARTS_TEMP, LG_RESTARTS_PATH, LG_RESTARTS_BACK);
+static void lg_restarts_load(void)
+{
+  const char *path = oneof(LG_RESTARTS_TEMP, LG_RESTARTS_PATH,
+                           LG_RESTARTS_BACK);
   statitem_load(lg_restarts, numof(lg_restarts), path);
   //statitem_show(lg_restarts, numof(lg_restarts));
 }
-static void lg_restarts_save(void) {
+static void lg_restarts_save(void)
+{
   //statitem_show(lg_restarts, numof(lg_restarts));
-  if( statitem_save(lg_restarts, numof(lg_restarts), LG_RESTARTS_TEMP) )
-    cycle(LG_RESTARTS_TEMP, LG_RESTARTS_PATH, LG_RESTARTS_BACK);
+  if (statitem_save(lg_restarts, numof(lg_restarts), LG_RESTARTS_TEMP)) {
+      cycle(LG_RESTARTS_TEMP, LG_RESTARTS_PATH, LG_RESTARTS_BACK);
+  }
 }
 
-static void lg_restarts_update(const char *name) {
+static void lg_restarts_update(const char* name)
+{
   statitem_add_hit(lg_restarts, numof(lg_restarts), name);
   //statitem_show(lg_restarts, numof(lg_restarts));
 
-  if( restarts_in == restarts_out ) {
-    ++restarts_in, dsme_log_wakeup();
+  if (restarts_in == restarts_out) {
+      ++restarts_in, dsme_log_wakeup();
   }
 }
 
@@ -304,23 +339,27 @@ static void lg_restarts_update(const char *name) {
  * resets
  * ------------------------------------------------------------------------- */
 
-static void lg_resets_load(void) {
-  const char *path = oneof(LG_RESETS_TEMP, LG_RESETS_PATH, LG_RESETS_BACK);
+static void lg_resets_load(void)
+{
+  const char* path = oneof(LG_RESETS_TEMP, LG_RESETS_PATH, LG_RESETS_BACK);
   statitem_load(lg_resets, numof(lg_resets), path);
   //statitem_show(lg_resets, numof(lg_resets));
 }
-static void lg_resets_save(void) {
+static void lg_resets_save(void)
+{
   //statitem_show(lg_resets, numof(lg_resets));
-  if( statitem_save(lg_resets, numof(lg_resets), LG_RESETS_TEMP) )
-    cycle(LG_RESETS_TEMP, LG_RESETS_PATH, LG_RESETS_BACK);
+  if (statitem_save(lg_resets, numof(lg_resets), LG_RESETS_TEMP)) {
+      cycle(LG_RESETS_TEMP, LG_RESETS_PATH, LG_RESETS_BACK);
+  }
 }
 
-static void lg_resets_update(const char *name) {
+static void lg_resets_update(const char* name)
+{
   statitem_add_hit(lg_resets, numof(lg_resets), name);
   //statitem_show(lg_resets, numof(lg_resets));
   
-  if( resets_in == resets_out ) {
-    ++resets_in, dsme_log_wakeup();
+  if (resets_in == resets_out ) {
+      ++resets_in, dsme_log_wakeup();
   }
 }
 
@@ -330,14 +369,14 @@ static void lg_resets_update(const char *name) {
 
 static void lg_handler_cb(void)
 {
-  if( restarts_in != restarts_out ) {
-    restarts_out = restarts_in;
-    lg_restarts_save();
+  if (restarts_in != restarts_out) {
+      restarts_out = restarts_in;
+      lg_restarts_save();
   }
   
-  if( resets_in != resets_out ) {
-    resets_out = resets_in;
-    lg_resets_save();
+  if (resets_in != resets_out) {
+      resets_out = resets_in;
+      lg_resets_save();
   }
 }
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -440,14 +479,14 @@ static void read_priv_uids(void)
 */
 static inline void* myrealloc(void* ptr, size_t size) 
 {
-	void* tmp;
+  void* tmp;
 
-	tmp = realloc(ptr, size);
-	if (!tmp) {
-		dsme_log(LOG_ERR, "%s", strerror(errno));
-		free(ptr);
-	}
-	return tmp;
+  tmp = realloc(ptr, size);
+  if (!tmp) {
+      dsme_log(LOG_ERR, "%s", strerror(errno));
+      free(ptr);
+  }
+  return tmp;
 }
 
 /**
@@ -512,95 +551,111 @@ static int deleteprocess(dsme_process_t* process)
 */
 static char** getenvbypid(pid_t pid)
 {
-	char** env      = NULL;
-	size_t envsize  = 0;
-	int    envcount = 0;
+  char** env      = NULL;
+  size_t envsize  = 0;
+  int    envcount = 0;
 
-	char*  buffer   = NULL;
-	size_t bufsize  = 0;
-	size_t buflen   = 0;
+  char*  buffer   = NULL;
+  size_t bufsize  = 0;
+  size_t buflen   = 0;
 
-	int    fd       = -1;
-	char   filename[32];  /* Max len is strlen("/proc/65535/environ") */
-	char*  ptr;
+  int    fd       = -1;
+  char   filename[32];  /* Max len is strlen("/proc/65535/environ") */
+  char*  ptr;
 
-	int    i;
+  int    i;
 
-	if (!pid) goto EXIT;
-	sprintf(filename,"/proc/%d/environ", pid);
-	fd = open(filename, O_RDONLY);
-	if (fd == -1) {
-		dsme_log(LOG_ERR, "%s", strerror(errno));
-		goto EXIT;
-	}
-	
-	/* Read proc-file */
-	while (1) {
-		int len;
-		
-		if (bufsize <= buflen) {
-			bufsize += 4096;
-			buffer = (char*)myrealloc(buffer, bufsize);
-			if (!buffer) goto EXIT;
-		}
-		
-		len = read(fd, buffer+buflen, bufsize-buflen);
-		if (len == -1) {
-			dsme_log(LOG_ERR, "%s", strerror(errno));
-			goto EXIT;
-		}
-		buflen += len;
-		
-		if (len == 0) {  /* EOF */
-			/* Add double '\0' after buffer */
-			if (buflen + 2 > bufsize) { /* Include 2 * '\0' */
-				buffer = (char*)myrealloc(buffer, bufsize + 2);
-				if (!buffer) goto EXIT;
-			}
-			*(buffer+buflen) = '\0';
-			*(buffer+buflen+1) = '\0'; /* Just in case */
+  if (!pid) {
+      goto EXIT;
+  }
+  sprintf(filename,"/proc/%d/environ", pid);
+  fd = open(filename, O_RDONLY);
+  if (fd == -1) {
+      dsme_log(LOG_ERR, "%s", strerror(errno));
+      goto EXIT;
+  }
 
-			break;
-		}
-	}
-	
+  /* Read proc-file */
+  while (1) {
+      int len;
 
-	/* make pointers */
-	ptr = buffer;
-	while (1) {
+      if (bufsize <= buflen) {
+          bufsize += 4096;
+          buffer = (char*)myrealloc(buffer, bufsize);
+          if (!buffer) {
+              goto EXIT;
+          }
+      }
 
-		/* +2 => Include terminating NULL as well */
-		if (envsize < ((envcount+2) * sizeof(char*))) {
-			envsize += sizeof(char*) * 1024;
-			env = (char**)myrealloc(env, envsize);
-			if (!env) goto EXIT;
-		}			
-		if (*ptr) {
-			env[envcount++] = ptr;
-		}
-		env[envcount] = NULL;
+      len = read(fd, buffer+buflen, bufsize-buflen);
+      if (len == -1) {
+          dsme_log(LOG_ERR, "%s", strerror(errno));
+          goto EXIT;
+      }
+      buflen += len;
 
-		if (*ptr == '\0') break;
+      if (len == 0) {  /* EOF */
+          /* Add double '\0' after buffer */
+          if (buflen + 2 > bufsize) { /* Include 2 * '\0' */
+              buffer = (char*)myrealloc(buffer, bufsize + 2);
+              if (!buffer) {
+                  goto EXIT;
+              }
+          }
+          *(buffer+buflen) = '\0';
+          *(buffer+buflen+1) = '\0'; /* Just in case */
 
-		while (*ptr++) ;  /* Find start of next string */
-	}		
-	envcount++;
+          break;
+      }
+  }
 
-	/* Add strings after pointer array */
-	env = (char**)myrealloc(env, (envcount * sizeof(char*)) + (buflen + 2));
-	if (!env) goto EXIT;
-	memmove(&env[envcount], buffer, buflen+2);
 
-	/* Relocate buffers to match memmoved addresses */
-	for (i=0 ; env[i] ; i++) {
-		env[i] = (char*)env[i] - 
-			 (char*)buffer +
-			 (char*)&env[envcount];
-	}
+  /* make pointers */
+  ptr = buffer;
+  while (1) {
+
+      /* +2 => Include terminating NULL as well */
+      if (envsize < ((envcount+2) * sizeof(char*))) {
+          envsize += sizeof(char*) * 1024;
+          env = (char**)myrealloc(env, envsize);
+          if (!env) {
+              goto EXIT;
+          }
+      }
+      if (*ptr) {
+          env[envcount++] = ptr;
+      }
+      env[envcount] = NULL;
+
+      if (*ptr == '\0') {
+          break;
+      }
+
+      while (*ptr++) ;  /* Find start of next string */
+  }
+  envcount++;
+
+  /* Add strings after pointer array */
+  env = (char**)myrealloc(env, (envcount * sizeof(char*)) + (buflen + 2));
+  if (!env) {
+      goto EXIT;
+  }
+  memmove(&env[envcount], buffer, buflen+2);
+
+  /* Relocate buffers to match memmoved addresses */
+  for (i=0 ; env[i] ; i++) {
+      env[i] = (char*)env[i] -
+               (char*)buffer +
+               (char*)&env[envcount];
+  }
  EXIT:
-	if (buffer) free(buffer);
-	if (fd != -1) close(fd);
-	return env;
+  if (buffer) {
+      free(buffer);
+  }
+  if (fd != -1) {
+      close(fd);
+  }
+  return env;
 }
 
 
@@ -824,26 +879,26 @@ cleanup:
 
 static void send_reset_request()
 {
-	DSM_MSGTYPE_REBOOT_REQ msg = DSME_MSG_INIT(DSM_MSGTYPE_REBOOT_REQ);
-	/* Send reset request here */
-	dsme_log(LOG_CRIT, "Here we will request for sw reset");
+  DSM_MSGTYPE_REBOOT_REQ msg = DSME_MSG_INIT(DSM_MSGTYPE_REBOOT_REQ);
+  /* Send reset request here */
+  dsme_log(LOG_CRIT, "Here we will request for sw reset");
 
-	if (!lg_reboot_enabled) {
-		dsme_log(LOG_CRIT, "Lifeguard reboots disabled from CAL");
-		dsme_log(LOG_ERR, "The device is in unstable state, reboot manually!");
-		return;
-	}
+  if (!lg_reboot_enabled) {
+      dsme_log(LOG_CRIT, "Lifeguard reboots disabled from CAL");
+      dsme_log(LOG_ERR, "The device is in unstable state, reboot manually!");
+      return;
+  }
 
-	
-	if (access(FILE_REBOOT_OVERRIDE, F_OK) != 0) { 
-		broadcast_internally(&msg);
-	} else {
-		dsme_log(LOG_ERR, "The device not rebooted since %s is present", 
-				FILE_REBOOT_OVERRIDE);
-		dsme_log(LOG_ERR, "The device is in unstable state, reboot manually!");
-	}
+
+  if (access(FILE_REBOOT_OVERRIDE, F_OK) != 0) {
+      broadcast_internally(&msg);
+  } else {
+      dsme_log(LOG_ERR, "The device not rebooted since %s is present",
+               FILE_REBOOT_OVERRIDE);
+      dsme_log(LOG_ERR, "The device is in unstable state, reboot manually!");
+  }
 }
-							
+
 static void send_lifeguard_notice(u_int32_t type, const char* command)
 {
   DSM_MSGTYPE_LG_NOTICE msg = DSME_MSG_INIT(DSM_MSGTYPE_LG_NOTICE);
@@ -856,8 +911,8 @@ static void send_lifeguard_notice(u_int32_t type, const char* command)
 
 static void send_stop_response(pid_t pid)
 {
-    GSList* ptr;
-    GSList* next;
+  GSList* ptr;
+  GSList* next;
 
   for (ptr = kill_groups; ptr; ptr = next) {
       dsme_kill_group_t* group = ptr->data;
@@ -940,7 +995,8 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
               /* Check if it hasn't respawned too fast */
               if (proc->restart_count >= proc->restart_limit) {
                   /* Try reset */
-                  if (proc->uid == 0 || g_slist_find(uids, GUINT_TO_POINTER(proc->uid))) {
+                  if (proc->uid == 0 ||
+                      g_slist_find(uids, GUINT_TO_POINTER(proc->uid))) {
                       if (proc->action == RESPAWN) {
                           dsme_log(LOG_CRIT,
                                    "Process '%s' with pid %d exited with %s %d; spawning too fast -> reset",
@@ -999,7 +1055,8 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
               break;
 
             case RESET:
-              if (proc->uid == 0 || g_slist_find(uids, GUINT_TO_POINTER(proc->uid))) {
+              if (proc->uid == 0 ||
+                  g_slist_find(uids, GUINT_TO_POINTER(proc->uid))) {
                   dsme_log(LOG_CRIT,
                            "Process '%s' with pid %d exited with %s %d; reset due to RESET policy",
                            proc->command,
@@ -1045,16 +1102,19 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
  * calls increment_process_counter().
  * @param The name of the process that caused the reset
  */
-static int update_reset_count(const char* process) {
-    lg_resets_update(process); return 0;	
+static int update_reset_count(const char* process)
+{
+  lg_resets_update(process);
+  return 0;
 #ifdef DEAD_CODE
-	if (access(FILE_DSME_DIR, X_OK) == 0) {
-		return increment_process_counter(FILE_DSME_LG_RESETS, process);
-	} else {
-		/* if we are on initfs, do nothing */
-		dsme_log(LOG_ERR, "DSME stats dir not accessible, lifeguard stats not saved");
-		return -1; 
-	}
+  if (access(FILE_DSME_DIR, X_OK) == 0) {
+      return increment_process_counter(FILE_DSME_LG_RESETS, process);
+  } else {
+      /* if we are on initfs, do nothing */
+      dsme_log(LOG_ERR,
+               "DSME stats dir not accessible, lifeguard stats not saved");
+      return -1;
+  }
 #endif
 }
 
@@ -1063,16 +1123,19 @@ static int update_reset_count(const char* process) {
  * calls increment_process_counter().
  * @param The name of the restarted process
  */
-static int update_restart_count(const char* process) {
-    lg_restarts_update(process); return 0;	
+static int update_restart_count(const char* process)
+{
+  lg_restarts_update(process);
+  return 0;
 #ifdef DEAD_CODE
-	if (access(FILE_DSME_DIR, X_OK) == 0) {
-		return increment_process_counter(FILE_DSME_LG_RESTARTS, process);
-	} else {
-		/* if we are on initfs, do nothing */
-		dsme_log(LOG_ERR, "DSME stats dir not accessible, lifeguard stats not saved");
-		return -1; 
-	}
+  if (access(FILE_DSME_DIR, X_OK) == 0) {
+      return increment_process_counter(FILE_DSME_LG_RESTARTS, process);
+  } else {
+      /* if we are on initfs, do nothing */
+      dsme_log(LOG_ERR,
+               "DSME stats dir not accessible, lifeguard stats not saved");
+      return -1;
+  }
 #endif
 }
 
@@ -1087,140 +1150,141 @@ static int update_restart_count(const char* process) {
 static int increment_process_counter(const char* statfilename,
                                      const char* process)
 {
-	ssize_t     read_len    = 0;
-	size_t      len         = 0;
-	char*       line        = NULL;
-	FILE*       statfile    = NULL;
-	char*       tmpfilename = NULL;
-	FILE*       tmpfile     = NULL;
-	int         found       = 0;
-	int         drop        = 0;
-	struct stat filestats;
+  ssize_t     read_len    = 0;
+  size_t      len         = 0;
+  char*       line        = NULL;
+  FILE*       statfile    = NULL;
+  char*       tmpfilename = NULL;
+  FILE*       tmpfile     = NULL;
+  int         found       = 0;
+  int         drop        = 0;
+  struct stat filestats;
 
-	tmpfilename = (char*)alloca(strlen(statfilename) + 5);
-	if (!tmpfilename)
-		return -1;
+  tmpfilename = (char*)alloca(strlen(statfilename) + 5);
+  if (!tmpfilename)
+      return -1;
 
-	tmpfilename = strcpy(tmpfilename, statfilename);
-	tmpfilename = strcat(tmpfilename, ".tmp");
+  tmpfilename = strcpy(tmpfilename, statfilename);
+  tmpfilename = strcat(tmpfilename, ".tmp");
 
-	tmpfile = fopen(tmpfilename, "w+");
-	if (!tmpfile) {
-		dsme_log(LOG_ERR, "Error opening tmpfile for Lifeguard stats");
-		return -1;
-	}
-	dsme_log(LOG_DEBUG, "tmpfile: %s opened", tmpfilename);
-	
-	if (stat(statfilename, &filestats) == 0) {
-		/* if the stat filesize is more than 1k, drop the first line */
-		if (filestats.st_size > 1024) {
-			dsme_log(LOG_INFO, "stats filesize > 1024, dropping the first line");
-			drop = 1;
-		}
-	}
-	
-	statfile = fopen(statfilename, "r");
-	if (statfile) {
+  tmpfile = fopen(tmpfilename, "w+");
+  if (!tmpfile) {
+      dsme_log(LOG_ERR, "Error opening tmpfile for Lifeguard stats");
+      return -1;
+  }
+  dsme_log(LOG_DEBUG, "tmpfile: %s opened", tmpfilename);
 
-		while ((read_len = getline(&line, &len, statfile)) != -1) {
-			char * delim;
-			int count = -1;
-	
-			if ((delim = strstr(line, DELIMETER)) == NULL) {
-				dsme_log(LOG_ERR, "bad line found in lifeguard stats, dropping..");
-				continue;
-			}
+  if (stat(statfilename, &filestats) == 0) {
+      /* if the stat filesize is more than 1k, drop the first line */
+      if (filestats.st_size > 1024) {
+          dsme_log(LOG_INFO, "stats filesize > 1024, dropping the first line");
+          drop = 1;
+      }
+  }
 
-			if (strncmp(line, process, delim-line) != 0) {
-				if (!drop) {
-					int len = strlen(line);
-					if (line[len - 2] == '*') {
-						line[len -2] = '\n';
-						line[len -1] = '\0';
-					}
-					fprintf(tmpfile, "%s", line);
-				} else {
-					drop = 0;
-				}
-				continue;
-			}
+  statfile = fopen(statfilename, "r");
+  if (statfile) {
+      while ((read_len = getline(&line, &len, statfile)) != -1) {
+          char* delim;
+          int count = -1;
 
-			char del[4];
-			char *beginning = strndup(line, delim-line);
-			if(!beginning) {
-				dsme_log(LOG_CRIT, "strdup failed");
-				exit(EXIT_FAILURE);
-			}
-			fprintf(tmpfile, "%s", beginning);
-			sscanf(delim, "%s %i", del, &count);
-			fprintf(tmpfile, "%s %i *\n", DELIMETER, ++count);
-			found = 1;
+          if ((delim = strstr(line, DELIMETER)) == NULL) {
+              dsme_log(LOG_ERR,
+                       "bad line found in lifeguard stats, dropping..");
+              continue;
+          }
 
-			if (beginning)
-				free(beginning);
-		}
-	}
+          if (strncmp(line, process, delim-line) != 0) {
+              if (!drop) {
+                  int len = strlen(line);
+                  if (line[len - 2] == '*') {
+                      line[len -2] = '\n';
+                      line[len -1] = '\0';
+                  }
+                  fprintf(tmpfile, "%s", line);
+              } else {
+                  drop = 0;
+              }
+              continue;
+          }
 
-	if (!found) {
-		dsme_log(LOG_DEBUG, "process not found in lifeguard stats, appending..");
-		fprintf(tmpfile, "%s : 1 *\n", process);
-	}
+          char del[4];
+          char* beginning = strndup(line, delim-line);
+          if(!beginning) {
+              dsme_log(LOG_CRIT, "strdup failed");
+              exit(EXIT_FAILURE);
+          }
+          fprintf(tmpfile, "%s", beginning);
+          sscanf(delim, "%s %i", del, &count);
+          fprintf(tmpfile, "%s %i *\n", DELIMETER, ++count);
+          found = 1;
 
-	if (line)
-		free(line);
+          if (beginning)
+              free(beginning);
+      }
+  }
 
-	if(statfile)
-		fclose(statfile);
-	
-	fclose(tmpfile);
+  if (!found) {
+      dsme_log(LOG_DEBUG, "process not found in lifeguard stats, appending..");
+      fprintf(tmpfile, "%s : 1 *\n", process);
+  }
 
-	dsme_log(LOG_DEBUG, "renaming %s to %s", tmpfilename, statfilename);
-	if(rename(tmpfilename, statfilename) == -1) {
-		dsme_log(LOG_ERR, "rename failed");
-	}
+  if (line)
+      free(line);
 
-	return 0;
+  if(statfile)
+      fclose(statfile);
+
+  fclose(tmpfile);
+
+  dsme_log(LOG_DEBUG, "renaming %s to %s", tmpfilename, statfilename);
+  if(rename(tmpfilename, statfilename) == -1) {
+      dsme_log(LOG_ERR, "rename failed");
+  }
+
+  return 0;
 }
 #endif
 
 static int reboot_flag(void)
 {
-	void *vptr = NULL;
-	unsigned long len = 0;
-	int ret = 1;
-	char *p;
-	
-	ret = cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER);
-	if (ret < 0) {
-		dsme_log(LOG_ERR, "Error reading R&D mode flags, Lifeguard reboots enabled");
-		return 1;
-	}
-	p = (char*)vptr;
-	if (len >= 1 && *p) {
-		dsme_log(LOG_DEBUG, "R&D mode enabled");
+  void*         vptr = NULL;
+  unsigned long len = 0;
+  int           ret = 1;
+  char*         p;
 
-		if (len > 1) {
-			if (strstr(p, "no-lifeguard-reset")) {
-				ret = 0;
-			} else {
-				ret = 1;
-			}
-		} else {
-			dsme_log(LOG_ERR, "No R&D mode flags found");
-			ret = 1;
-		}
-	} else {
-		ret = 1;
-		dsme_log(LOG_DEBUG, "R&D mode disabled");
-	}
+  ret = cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER);
+  if (ret < 0) {
+      dsme_log(LOG_ERR,
+               "Error reading R&D mode flags, Lifeguard reboots enabled");
+      return 1;
+  }
+  p = (char*)vptr;
+  if (len >= 1 && *p) {
+      dsme_log(LOG_DEBUG, "R&D mode enabled");
 
-	if (ret == 1)
-		dsme_log(LOG_DEBUG, "Lifeguard resets enabled!");
-	else
-		dsme_log(LOG_DEBUG, "Lifeguard resets disabled!");
-	
-	free(vptr);
-	return ret;
+      if (len > 1) {
+          if (strstr(p, "no-lifeguard-reset")) {
+              ret = 0;
+          } else {
+              ret = 1;
+          }
+      } else {
+          dsme_log(LOG_ERR, "No R&D mode flags found");
+          ret = 1;
+      }
+  } else {
+      ret = 1;
+      dsme_log(LOG_DEBUG, "R&D mode disabled");
+  }
+
+  if (ret == 1)
+      dsme_log(LOG_DEBUG, "Lifeguard resets enabled!");
+  else
+      dsme_log(LOG_DEBUG, "Lifeguard resets disabled!");
+
+  free(vptr);
+  return ret;
 }
 
 
@@ -1248,16 +1312,16 @@ module_fn_info_t message_handlers[] = {
  */
 void module_init(module_t * handle)
 {
-	dsme_log(LOG_DEBUG, "liblifeguard.so loaded");
+  dsme_log(LOG_DEBUG, "liblifeguard.so loaded");
 
-        lg_restarts_load();
-        lg_resets_load();
+  lg_restarts_load();
+  lg_resets_load();
 
-	read_priv_uids();
-	lg_reboot_enabled = reboot_flag();
+  read_priv_uids();
+  lg_reboot_enabled = reboot_flag();
   
-        // attach callback for logger thread
-        dsme_log_cb_attach(lg_handler_cb);
+  // attach callback for logger thread
+  dsme_log_cb_attach(lg_handler_cb);
 }
 
 /**
@@ -1265,19 +1329,19 @@ void module_init(module_t * handle)
  */
 void module_fini(void)
 {
-        // detach callback for logger thread
-        dsme_log_cb_detach(lg_handler_cb);
-  
-        spawn_shutdown();
+  // detach callback for logger thread
+  dsme_log_cb_detach(lg_handler_cb);
 
-        while (processes) {
-		dsme_process_t* process = processes->data;
-		send_stop_response(process->pid);
-		deleteprocess(process);
-	}
+  spawn_shutdown();
 
-        g_slist_free(uids);
-        uids = 0;
+  while (processes) {
+      dsme_process_t* process = processes->data;
+      send_stop_response(process->pid);
+      deleteprocess(process);
+  }
 
-	dsme_log(LOG_DEBUG, "liblifeguard.so unloaded");
+  g_slist_free(uids);
+  uids = 0;
+
+  dsme_log(LOG_DEBUG, "liblifeguard.so unloaded");
 }
