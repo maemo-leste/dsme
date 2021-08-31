@@ -30,3 +30,9 @@ start_post() {
 	pidof dsme > $OMITDIR/dsme.pid
 	pidof dsme-server > $OMITDIR/dsme-server.pid
 }
+
+#do not remove
+stop() {
+	ebegin "Stopping dsme"
+	eend 0
+}
