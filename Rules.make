@@ -185,7 +185,7 @@ $(DISTCLN_SUBDIRS):
 # Common rule for all executables
 ifndef INSTALLING
 $(BINARIES):
-	$(CC) -o $@ $(LDFLAGS) $(call TARGET_OBJS,$@) $(addprefix -l,$($@_SO_LIBS) $($@_A_LIBS) $($@_LIBS))
+	$(CC) -o $@ $(call TARGET_OBJS,$@) $(addprefix -l,$($@_SO_LIBS) $($@_A_LIBS) $($@_LIBS)) $(LDFLAGS)
 endif
 
 
