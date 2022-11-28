@@ -8,19 +8,26 @@ BINARIES	:=	batttest dsmetool dsmetest bootstate waitfordsme dsmereboot
 # Target composition and overrides
 #
 batttest_C_OBJS		:=	batttest.o
-batttest_LIBS	:=	dsme
+batttest: C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
+batttest: LD_EXTRA_GENFLAGS := -ldsme $$(pkg-config --libs glib-2.0)
 dsmetool_C_OBJS 	:=	dsmetool.o
-dsmetool_LIBS	:=	dsme
+dsmetool: C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
+dsmetool: LD_EXTRA_GENFLAGS := -ldsme $$(pkg-config --libs glib-2.0)
 dsmetest_C_OBJS 	:=	dsmetest.o
-dsmetest_LIBS	:=	dsme
+dsmetest: C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
+dsmetest: LD_EXTRA_GENFLAGS := -ldsme $$(pkg-config --libs glib-2.0)
 bootstate_C_OBJS 	:=	bootstate.o
-bootstate_LIBS	:=	dsme
+bootstate: C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
+bootstate: LD_EXTRA_GENFLAGS := -ldsme $$(pkg-config --libs glib-2.0)
 waitfordsme_C_OBJS 	:=	waitfordsme.o
-waitfordsme_LIBS	:=	dsme
+waitfordsme: C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
+waitfordsme: LD_EXTRA_GENFLAGS := -ldsme $$(pkg-config --libs glib-2.0)
 kicker_C_OBJS 	:=	kicker.o
-kicker_LIBS	:=	dsme cal
+kicker: C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
+kicker: LD_EXTRA_GENFLAGS := -ldsme $$(pkg-config --libs glib-2.0)
 dsmereboot_C_OBJS := dsmereboot.o
-dsmereboot_LIBS := dsme
+dsmereboot: C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
+dsmereboot: LD_EXTRA_GENFLAGS := -ldsme $$(pkg-config --libs glib-2.0)
 
 
 #
