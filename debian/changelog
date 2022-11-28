@@ -1,3 +1,9 @@
+dsme (0.61.9) unstable; urgency=medium
+
+  * Compilation fixes for chimaera
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Mon, 28 Nov 2022 19:04:05 +0100
+
 dsme (0.61.8) unstable; urgency=medium
 
   * lifeguard: Wait until process is really killed before announcing
