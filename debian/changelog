@@ -1,3 +1,9 @@
+dsme (0.61.10) unstable; urgency=medium
+
+  * Linking fixes for chimaera
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Tue, 13 Dec 2022 14:53:13 +0100
+
 dsme (0.61.9) unstable; urgency=medium
 
   * Compilation fixes for chimaera
