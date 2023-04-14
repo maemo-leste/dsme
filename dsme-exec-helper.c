@@ -41,6 +41,14 @@
 #include <grp.h>
 #include <sysexits.h>
 
+#ifdef DSME_ELOGIND_ENABLE
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <systemd/sd-login.h>
+
+#define CGROUP_SYSFS_PATH "/sys/fs/cgroup/elogind/"
+#define CGROUP_PROCS "/cgroup.procs"
+#endif
 
 static bool parse_args(int    argc,
                        char*  argv[],
@@ -213,6 +221,76 @@ cleanup:
   return false;
 }
 
+#ifdef DSME_ELOGIND_ENABLE
+static bool login_session_setup(uid_t uid)
+{
+    const char *session = getenv("XDG_SESSION_ID");
+
+    if (!session || !*session) {
+        return true;
+    }
+
+    uid_t session_uid;
+
+    if (sd_session_get_uid(session, &session_uid)) {
+        fprintf(stderr, "'%s' sd_session_get_uid() failed: %s\n", session,
+                strerror(errno));
+        return false;
+    }
+
+    if (uid != session_uid) {
+        return true;
+    }
+
+    /* lets assume sd_session_get_uid() has already verified
+     * XDG_SESSION_ID does not contain some crazy value
+     */
+    char *path = malloc(strlen(CGROUP_SYSFS_PATH) + strlen(session) +
+                        strlen(CGROUP_PROCS) + 1);
+
+    if (path == NULL) {
+        fprintf(stderr, "'login_session_setup' malloc() failed: %s\n",
+                strerror(errno));
+        return false;
+    }
+
+    strcpy(path, CGROUP_SYSFS_PATH);
+    strcat(path, session);
+    strcat(path, CGROUP_PROCS);
+
+    bool rv = false;
+    int fd = open(path, O_WRONLY);
+
+    if (fd != -1) {
+        char *pid;
+
+        if (asprintf(&pid, "%ld", (long)getpid()) != -1) {
+            size_t bytes = strlen(pid);
+
+            if (write(fd, pid, bytes) != bytes) {
+                fprintf(stderr, "'%s' write('%s') failed: %s\n", path, pid,
+                        strerror(errno));
+            } else {
+                rv  = true;
+            }
+
+            free(pid);
+        } else {
+            fprintf(stderr, "'login_session_setup' asprintf() failed: %s\n",
+                    strerror(errno));
+        }
+
+        close(fd);
+    } else {
+        fprintf(stderr, "'%s' open() failed: %s\n", path, strerror(errno));
+    }
+
+    free(path);
+
+    return rv;
+}
+#endif
+
 // TODO: log to syslog
 // TODO: parameterize syslog or stderr on cmdline
 int main(int argc, char* argv[])
@@ -224,7 +302,11 @@ int main(int argc, char* argv[])
     char* cmdline;
 
     if (parse_args(argc, argv, &uid, &gid, &nice_val, &oom_adj, &cmdline)) {
-
+#ifdef DSME_ELOGIND_ENABLE
+        if (!login_session_setup(uid)) {
+            return EXIT_FAILURE;
+        }
+#endif
         non_async_signal_safe_child_setup(cmdline, uid, gid, nice_val, oom_adj);
 
         char** args = 0;

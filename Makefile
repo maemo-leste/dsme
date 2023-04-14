@@ -61,9 +61,14 @@ ifneq (,$(findstring DSME_MEMORY_THERMAL_MGMT,$(C_DEFINES)))
 export DSME_MEMORY_THERMAL_MGMT = yes
 endif
 
-ifeq (,$(wildcard /etc/devuan_version))
+ifeq ($(shell pkg-config --exists libsystemd && echo 1),1)
 	LIBSYSTEMD := libsystemd
 	C_DEFINES  += DSME_SYSTEMD_ENABLE
+endif
+
+ifeq ($(shell pkg-config --exists libelogind && echo 1),1)
+	LIBELOGIND := libelogind
+	C_DEFINES  += DSME_ELOGIND_ENABLE
 endif
 
 #
@@ -78,6 +83,7 @@ dsme: C_GENFLAGS  := -DPRG_VERSION=$(VERSION) -g -std=c99 \
 dsme_LIBS         := cal
 dsme: LD_GENFLAGS :=
 dsme: LD_EXTRA_GENFLAGS := $$(pkg-config --libs $(LIBSYSTEMD))
+dsme: MKDEP_INCFLAGS += $$(pkg-config --cflags-only-I $(LIBSYSTEMD))
 
 
 # dsme-server
@@ -97,8 +103,9 @@ dsmesock.o    : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
 # TODO: move dsme-exec-helper to modules/
 # dsme-exec-helper
 dsme-exec-helper_C_OBJS := dsme-exec-helper.o oom.o
-dsme-exec-helper.o : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
-
+dsme-exec-helper.o : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0 $(LIBELOGIND))
+dsme-exec-helper.o : MKDEP_INCFLAGS += $$(pkg-config --cflags-only-I $(LIBELOGIND))
+dsme-exec-helper   : LD_EXTRA_GENFLAGS := $$(pkg-config --libs $(LIBELOGIND))
 
 #
 # This is the topdir for build
