@@ -112,13 +112,6 @@ typedef struct {
     GSList*           pids;
 } dsme_kill_group_t;
 
-typedef struct {
-  endpoint_t*       client;
-  const struct ucred* ucred;
-  int signal;
-  int pending;
-} dsme_stop_process_t;
-
 static int deleteprocess(dsme_process_t * process);
 static void send_reset_request();
 static char **getenvbypid(pid_t pid);
@@ -798,81 +791,15 @@ cleanup:
   deleteprocess(process);
 }
 
-static dsme_kill_group_t* process_stop(endpoint_t* client,
-                                       const struct ucred* ucred,
-                                       const char* command, int signal)
-{
-  GSList*             ptr = processes;
-  dsme_kill_group_t*  group = 0;
-
-  dsme_log(LOG_DEBUG, "request to stop process (%s)", command);
-
-  while ((ptr = g_slist_find_custom(ptr, command, compare_commands))) {
-    dsme_process_t* proc = (dsme_process_t *) ptr->data;
-    uid_t           oldeuid;
-
-    /*
-           Change euid to sender's UID.
-           seteuid() can fail if dsme is not running as root.
-           If dsme is running as root but seteuid() still fails most propably
-           it means that someone tried to hack with capabilities.
-
-           If kill() success with changed eiud then set process action to ONCE.
-
-           And restore original EUID.
-           */
-    oldeuid = geteuid();
-    if (seteuid(ucred->uid) == -1) {
-      dsme_log(LOG_ERR, "seteuid(%d): %s", ucred->uid, strerror(errno));
-    }
-
-    if ((ucred->uid != 0) && (geteuid() == 0)) {
-      dsme_log(LOG_ERR, "Someone tried to hack? (uid: %d)", ucred->uid);
-    } else {
-      if (kill(proc->pid, signal) == -1) {
-        dsme_log(LOG_ERR, "kill(%d, %d) => %s",
-                 proc->pid, signal, strerror(errno));
-      } else {
-        if (!group) {
-          group = malloc(sizeof(*group));
-          memset(group, 0, sizeof(*group));
-          group->client = endpoint_copy(client);
-        }
-        group->pids = g_slist_append(group->pids,
-                                     GINT_TO_POINTER(proc->pid));
-        proc->action = ONCE;
-        dsme_log(LOG_DEBUG,
-                 "killing process %d with signal %d",
-                 proc->pid, signal);
-      }
-    }
-    seteuid(oldeuid);
-
-    ptr = g_slist_next(ptr);
-  }
-
-  return group;
-}
-
-static void process_stop_status(endpoint_t* client, const char* info)
-{
-  DSM_MSGTYPE_PROCESS_STOPSTATUS returnmsg =
-      DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_STOPSTATUS);
-  returnmsg.killed = false;
-
-  endpoint_send_with_extra(client, &returnmsg, strlen(info) + 1, info);
-}
-
 DSME_HANDLER(DSM_MSGTYPE_PROCESS_STOP, client, msg)
 {
   const char* info = "not found, not root or kill failed";
+  GSList*             ptr;
+  const struct ucred* ucred;
   const char*         command;
   size_t              command_size;
   dsme_kill_group_t*  group = 0;
-  const struct ucred* ucred;
-
   ucred = endpoint_ucred(client);
-
   if (!ucred) {
       info = "failed to get ucred";
       goto cleanup;
@@ -888,66 +815,66 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_STOP, client, msg)
       info = "non-terminated command string";
       goto cleanup;
   }
+  dsme_log(LOG_DEBUG, "request to stop process (%s)", command);
 
-  group = process_stop(client, ucred, command, msg->signal);
+  ptr = processes;
+  while ((ptr = g_slist_find_custom(ptr, command, compare_commands))) {
+      dsme_process_t* proc = (dsme_process_t *) ptr->data;
+      uid_t           oldeuid;
+
+      /*
+         Change euid to sender's UID.
+         seteuid() can fail if dsme is not running as root.
+         If dsme is running as root but seteuid() still fails most propably
+         it means that someone tried to hack with capabilities.
+
+         If kill() success with changed eiud then set process action to ONCE.
+
+         And restore original EUID.
+         */
+      oldeuid = geteuid();
+      if (seteuid(ucred->uid) == -1) {
+          dsme_log(LOG_ERR, "seteuid(%d): %s", ucred->uid, strerror(errno));
+      }
+
+      if ((ucred->uid != 0) && (geteuid() == 0)) {
+          dsme_log(LOG_ERR, "Someone tried to hack? (uid: %d)", ucred->uid);
+      } else {
+          if (kill(proc->pid, msg->signal) == -1) {
+              dsme_log(LOG_ERR, 
+                       "kill(%d, %d) => %s",
+                       proc->pid, msg->signal,
+                       strerror(errno));
+          } else {
+              if (!group) {
+                  group = malloc(sizeof(*group));
+                  memset(group, 0, sizeof(*group));
+                  group->client = endpoint_copy(client);
+              }
+              group->pids = g_slist_append(group->pids,
+                                           GINT_TO_POINTER(proc->pid));
+              proc->action = ONCE;
+              dsme_log(LOG_DEBUG,
+                       "killing process %d with signal %d",
+                       proc->pid,
+                       msg->signal);
+          }
+      }
+      seteuid(oldeuid);
+
+      ptr = g_slist_next(ptr);
+  }
 
 cleanup:
-  if (group)
-    kill_groups = g_slist_append(kill_groups, group);
-  else
-    process_stop_status(client, info);
-}
-
-static void stop_process(gpointer proc, gpointer user_data)
-{
-  dsme_stop_process_t *data = user_data;
-  dsme_kill_group_t*  group = 0;
-  const char *command = ((dsme_process_t*)proc)->command;
-
-  group = process_stop(data->client, data->ucred, command, data->signal);
-
   if (group) {
-    data->pending++;
-    kill_groups = g_slist_append(kill_groups, group);
+      kill_groups = g_slist_append(kill_groups, group);
+  } else {
+      DSM_MSGTYPE_PROCESS_STOPSTATUS returnmsg =
+      DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_STOPSTATUS);
+      returnmsg.killed = false;
+
+      endpoint_send_with_extra(client, &returnmsg, strlen(info) + 1, info);
   }
-  else
-    process_stop_status(data->client, command);
-}
-
-DSME_HANDLER(DSM_MSGTYPE_PROCESS_STOP_ALL, client, msg)
-{
-  const struct ucred* ucred = endpoint_ucred(client);
-  dsme_stop_process_t data;
-  GSList* reversed;
-
-  if (!endpoint_is_dsme(client)) {
-      /* If the message is from outside of dsme, check the ucred */
-      if (!ucred) {
-          dsme_log(LOG_ERR, "getucred failed");
-          return;
-      }
-      if (ucred->uid != 0) {
-          dsme_log(LOG_ERR, "stop all from uid %d", ucred->uid);
-          return;
-      }
-  }
-
-  data.client = client;
-  data.signal = msg->signal;
-  data.ucred = ucred;
-  data.pending = 0;
-
-  /* There is a high chance later started processes to require earlier started,
-     give them a chance to clean-up properly */
-  reversed = g_slist_reverse(g_slist_copy(processes));
-  g_slist_foreach(processes, stop_process, &data);
-  g_slist_free(reversed);
-
-  DSM_MSGTYPE_PROCESS_STOP_ALL_STATUS returnmsg =
-      DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_STOP_ALL_STATUS);
-  returnmsg.pending = data.pending;
-
-  endpoint_send(client, &returnmsg);
 }
 
 static void send_reset_request()
@@ -996,12 +923,9 @@ static void send_stop_response(pid_t pid)
           if (!group->pids) {
               DSM_MSGTYPE_PROCESS_STOPSTATUS returnmsg =
                       DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_STOPSTATUS);
-              char info[32];
+              const char* info = "killed";
               dsme_log(LOG_DEBUG, "process %d killed", pid);
               returnmsg.killed = true;
-
-              snprintf(info, sizeof(info), "killed %d", pid);
-
               endpoint_send_with_extra(group->client, &returnmsg,
                                        strlen(info) + 1, info);
               endpoint_free(group->client);
@@ -1380,7 +1304,6 @@ module_fn_info_t message_handlers[] = {
     DSME_HANDLER_BINDING(DSM_MSGTYPE_PROCESS_STOP),
     DSME_HANDLER_BINDING(DSM_MSGTYPE_PROCESS_EXITED),
     DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_CHANGE_IND),
-    DSME_HANDLER_BINDING(DSM_MSGTYPE_PROCESS_STOP_ALL),
     {0}
 };
 

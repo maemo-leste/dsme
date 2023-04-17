@@ -369,80 +369,6 @@ static int send_reboot_request()
     return EXIT_SUCCESS;
 }
 
-static int send_stop_all_request(int signal)
-{
-    DSM_MSGTYPE_PROCESS_STOP_ALL msg = DSME_MSG_INIT(
-                DSM_MSGTYPE_PROCESS_STOP_ALL);
-    DSM_MSGTYPE_PROCESS_STOPSTATUS* retmsg;
-    fd_set rfds;
-    int ret = EXIT_SUCCESS;
-    int pending = 0;
-    bool status_received = false;
-    msg.signal = signal;
-
-    connect_to_dsme();
-    send_to_dsme(&msg);
-
-    while (conn) {
-        FD_ZERO(&rfds);
-        FD_SET(conn->fd, &rfds);
-
-        if (select(conn->fd+1, &rfds, NULL, NULL, NULL) == -1) {
-            ret = EXIT_FAILURE;
-            printf("Error in select()\n");
-            goto out;
-        }
-
-        retmsg = (DSM_MSGTYPE_PROCESS_STOPSTATUS*)dsmesock_receive(conn);
-
-        if (DSMEMSG_CAST(DSM_MSGTYPE_CLOSE, retmsg)) {
-            free(retmsg);
-            goto out;
-        }
-
-        if (DSMEMSG_CAST(DSM_MSGTYPE_PROCESS_STOP_ALL_STATUS, retmsg)) {
-            pending += ((DSM_MSGTYPE_PROCESS_STOP_ALL_STATUS*)retmsg)->pending;
-            free(retmsg);
-            status_received = true;
-
-            if (pending == 0) {
-              printf("All done.\n");
-              goto out;
-            }
-            continue;
-        }
-
-        if (DSMEMSG_CAST(DSM_MSGTYPE_PROCESS_STOPSTATUS, retmsg) == 0) {
-            printf("Received invalid message (type: %i)\n",
-                   dsmemsg_id((dsmemsg_generic_t*)retmsg));
-            free(retmsg);
-            continue;
-        }
-
-        char* info = (char*)DSMEMSG_EXTRA(retmsg);
-
-        printf("%s\n", info);
-
-        if (retmsg->killed) {
-          pending--;
-
-          if (status_received && pending == 0) {
-            printf("All done.\n");
-            break;
-          }
-        } else {
-            ret = EXIT_FAILURE;
-        }
-
-        free(retmsg);
-    }
-
-out:
-    disconnect_from_dsme();
-
-    return ret;
-}
-
 static int send_ta_test_request()
 {
     DSM_MSGTYPE_SET_TA_TEST_MODE msg =
@@ -470,10 +396,10 @@ int main(int argc, char* argv[])
     const char* group         = 0;
     int         nice          = 0;
     int         oom_adj       = 0;
-    enum { NONE, START, STOP, STOP_ALL } action = NONE;
+    enum { NONE, START, STOP } action = NONE;
     const char* program       = "";
     process_actions_t policy  = ONCE;
-    const char* short_options = "n:m:hr:f:t:o:c:T:k:S:u:g:U:G:dspbvay";
+    const char* short_options = "n:m:hr:f:t:o:c:T:k:S:u:g:U:G:dspbva";
     const struct option long_options[] = {
         {"help",               0, NULL, 'h'},
         {"start-reset",        1, NULL, 'r'},
@@ -496,7 +422,6 @@ int main(int argc, char* argv[])
         {"reboot",             0, NULL, 'b'},
         {"version",            0, NULL, 'v'},
         {"ta-test",            0, NULL, 'a'},
-        {"stop-all",           0, NULL, 'y'},
         {0, 0, 0, 0}
     };
 
@@ -569,9 +494,6 @@ int main(int argc, char* argv[])
             case 'b':
                 return send_reboot_request();
                 break;
-            case 'y':
-                action = STOP_ALL;
-                break;
             case 'v':
                 return get_version();
                 break;
@@ -595,13 +517,6 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    if (action == STOP_ALL) {
-        if (getuid() != 0)
-            printf("Only root can do that\n");
-        else
-            return send_stop_all_request(signum);
-    }
-
     if (username != 0) {
         struct passwd *pw_entry = getpwnam(username);
 
@@ -614,6 +529,7 @@ int main(int argc, char* argv[])
         }
         uid = pw_entry->pw_uid;
     }
+
 
     if (group != 0) {
         struct group* gr_entry = getgrnam(group);
