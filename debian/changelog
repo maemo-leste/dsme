@@ -1,3 +1,9 @@
+dsme (0.61.12) unstable; urgency=medium
+
+  * lifeguard: implement "stop all" functionality
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Mon, 17 Apr 2023 10:45:53 +0300
+
 dsme (0.61.11) unstable; urgency=medium
 
   * dsme-exec-helper: join process to login session if one exists
