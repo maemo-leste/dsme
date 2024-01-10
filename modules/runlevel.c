@@ -69,6 +69,9 @@ static bool change_runlevel(dsme_runlevel_t runlevel)
  */
 static void shutdown(dsme_runlevel_t runlevel)
 {
+  bool has_elogind;
+  bool has_systemd;
+
   if ((runlevel != DSME_RUNLEVEL_REBOOT)   &&
       (runlevel != DSME_RUNLEVEL_SHUTDOWN) &&
       (runlevel != DSME_RUNLEVEL_MALF))
@@ -81,37 +84,34 @@ static void shutdown(dsme_runlevel_t runlevel)
            runlevel == DSME_RUNLEVEL_REBOOT   ? "Reboot"   :
                                                 "Malf");
 
+  has_elogind = access("/bin/loginctl", X_OK) == 0;
+  has_systemd = access("/bin/systemctl", X_OK) == 0;
+
   /* If we have systemd, use systemctl commands */
-  if (access("/bin/systemctl", X_OK) == 0)
+  if (has_elogind || has_systemd)
   {
       char command[64];
+      const char *cmd = has_elogind ? "/bin/loginctl" : "/bin/systemctl --no-block";
 
-      if (runlevel == DSME_RUNLEVEL_SHUTDOWN ||
-          runlevel == DSME_RUNLEVEL_MALF)
-      {
-          snprintf(command, sizeof(command), "/bin/systemctl --no-block poweroff");
-      }
-      else
-      {
-          snprintf(command, sizeof(command), "/bin/systemctl --no-block reboot");
+      if (runlevel == DSME_RUNLEVEL_SHUTDOWN || runlevel == DSME_RUNLEVEL_MALF) {
+          snprintf(command, sizeof(command), "%s poweroff", cmd);
+      } else {
+          snprintf(command, sizeof(command), "%s reboot", cmd);
       }
 
       dsme_log(LOG_NOTICE, "Issuing %s", command);
-      if (system(command) != 0)
-      {
+
+      if (system(command) != 0) {
           dsme_log(LOG_WARNING, "command %s failed: %m", command);
           /* We ignore error. No retry or anything else */
       }
-  }
   /* If runlevel change fails, handle the shutdown/reboot by DSME */
-  else if (access("/sbin/telinit", X_OK) != 0 || !change_runlevel(runlevel))
-  {
+  } else if (access("/sbin/telinit", X_OK) != 0 || !change_runlevel(runlevel)) {
       dsme_log(LOG_CRIT, "Doing forced shutdown/reboot");
       sync();
       (void)remount_mmc_readonly();
-      if (runlevel == DSME_RUNLEVEL_SHUTDOWN ||
-          runlevel == DSME_RUNLEVEL_MALF)
-      {
+
+      if (runlevel == DSME_RUNLEVEL_SHUTDOWN || runlevel == DSME_RUNLEVEL_MALF) {
           dsme_log(LOG_CRIT, "Issuing poweroff");
           if (system("/sbin/poweroff") != 0) {
               dsme_log(LOG_ERR, "/sbin/poweroff failed, trying again in 3s");
