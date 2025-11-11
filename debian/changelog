@@ -1,3 +1,9 @@
+dsme (0.61.15) unstable; urgency=medium
+
+  * alarmtracker: 32 bit time_t fixes for Excalibur/Trixie
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Tue, 11 Nov 2025 11:52:50 +0100
+
 dsme (0.61.14) unstable; urgency=medium
 
   * runlevel: add elogind shutdown/reboot support
