@@ -43,6 +43,7 @@
 #include <time.h>
 #include <errno.h>
 #include <string.h>
+#include <inttypes.h>
 
 
 #define SNOOZE_TIMEOUT 120 /* 2 minutes */
@@ -76,7 +77,7 @@ static void save_alarm_queue_status_cb(void)
   } else {
       bool temp_file_ok = true;
 
-      if (fprintf(f, "%ld, %ld, %ld\n", active, desktop, actdead) < 0) {
+      if (fprintf(f, "%"PRIdMAX", %"PRIdMAX", %"PRIdMAX"\n", active, desktop, actdead) < 0) {
           dsme_log_raw(LOG_DEBUG, "Error writing %s", ALARM_STATE_FILE_TMP);
           temp_file_ok = false;
       }
@@ -120,7 +121,7 @@ static void restore_alarm_queue_status(void)
   if ((f = fopen(ALARM_STATE_FILE, "r")) == 0) {
       dsme_log(LOG_DEBUG, "%s: %s", ALARM_STATE_FILE, strerror(errno));
   } else {
-      if (fscanf(f, "%ld, %ld, %ld", &active, &desktop, &actdead) != 3) {
+      if (fscanf(f, "%"PRIdMAX", %"PRIdMAX", %"PRIdMAX, &active, &desktop, &actdead) != 3) {
           dsme_log(LOG_DEBUG, "Error reading file %s", ALARM_STATE_FILE);
       } else {
           alarm_state_file_up_to_date = true;
@@ -131,7 +132,7 @@ static void restore_alarm_queue_status(void)
 
   if (alarm_state_file_up_to_date) {
       dsme_log(LOG_DEBUG,
-               "Alarm queue status restored: %ld, %ld, %ld",
+               "Alarm queue status restored: %"PRIdMAX", %"PRIdMAX", %"PRIdMAX,
                active,
                desktop,
                actdead);
@@ -242,13 +243,13 @@ static void alarmd_queue_status_ind(const DsmeDbusMessage* ind)
       desktop = new_desktop;
       actdead = new_actdead;
 
-      dsme_log(LOG_DEBUG, "got new alarms: %ld, %ld, %ld", active, desktop, actdead);
+      dsme_log(LOG_DEBUG, "got new alarms: %"PRIdMAX", %"PRIdMAX", %"PRIdMAX, active, desktop, actdead);
 
       /* save alarm queue status in the logger thread */
       alarm_state_file_up_to_date = false;
       dsme_log_wakeup();
   } else {
-      dsme_log(LOG_DEBUG, "got old alarms: %ld, %ld, %ld", active, desktop, actdead);
+      dsme_log(LOG_DEBUG, "got old alarms: %"PRIdMAX", %"PRIdMAX", %"PRIdMAX, active, desktop, actdead);
   }
 
   set_alarm_state();
