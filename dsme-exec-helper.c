@@ -46,7 +46,7 @@
 #include <fcntl.h>
 #include <systemd/sd-login.h>
 
-#define CGROUP_SYSFS_PATH "/sys/fs/cgroup/elogind/"
+#define CGROUP_SYSFS_PATH "/sys/fs/cgroup/"
 #define CGROUP_PROCS "/cgroup.procs"
 #endif
 
